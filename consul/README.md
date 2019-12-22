@@ -68,7 +68,7 @@ kustomize config run $DEMO
 EXPECTED="StatefulSet: 1"
 
 TEST="$(kustomize config grep "spec.replicas=3" $DEMO |\
-  kustomize config grep "spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS].value=3" $DEMO |\
+  kustomize config grep "spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS].value=3" |\
   kustomize config count)"
 [ "$TEST" = "$EXPECTED" ]
 ```
