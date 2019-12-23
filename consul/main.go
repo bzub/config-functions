@@ -182,7 +182,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: consul
       app.kubernetes.io/instance: {{ .Metadata.Name }}
-  serviceName: consul
+  serviceName: {{ .Metadata.Name }}
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
