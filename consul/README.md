@@ -72,3 +72,9 @@ TEST="$(kustomize config grep "spec.replicas=3" $DEMO |\
   kustomize config count)"
 [ "$TEST" = "$EXPECTED" ]
 ```
+
+Cleanup the demo workspace.
+<!-- @cleanupWorkspace @test -->
+```sh
+rm -rf $DEMO
+```
