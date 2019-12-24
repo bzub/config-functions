@@ -2,4 +2,4 @@ module github.com/bzub/config-functions/consul
 
 go 1.13
 
-require sigs.k8s.io/kustomize/kyaml v0.0.3
+require sigs.k8s.io/kustomize/kyaml v0.0.4-0.20191224180729-697a6e9759e3
