@@ -62,7 +62,7 @@ StatefulSet config. The `-bootstrap-expect` flag passed to consul will be
 automatically updated via the CONSUL_REPLICAS environment variable.
 <!-- @verifyStatefulSetReplicas3 @test -->
 ```sh
-sed -i '' 's/replicas: 1/replicas: 3/' "$DEMO/local-config.yaml"
+sed -i 's/replicas: 1/replicas: 3/' "$DEMO/local-config.yaml"
 kustomize config run $DEMO
 
 EXPECTED="StatefulSet: 1"
