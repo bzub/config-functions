@@ -262,8 +262,6 @@ spec:
               name: dns-udp
               protocol: "UDP"
           readinessProbe:
-            # NOTE(mitchellh): when our HTTP status endpoints support the
-            # proper status codes, we should switch to that. This is temporary.
             exec:
               command:
                 - "/bin/sh"
