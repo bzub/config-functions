@@ -5,7 +5,7 @@
 This function creates a Job which creates a Consul gossip encryption key, and
 configures a Consul StatefulSet to use said key.
 
-It is inspired by the official [Consul documentation](docs).
+It is inspired by the official [Consul documentation][docs].
 
 ## Getting Started
 

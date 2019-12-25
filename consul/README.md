@@ -1,4 +1,8 @@
+[consul]: https://www.consul.io/
+
 # consul Configuration Function
+
+Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 
 ## Getting Started
 

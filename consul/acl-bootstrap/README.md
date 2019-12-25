@@ -6,7 +6,7 @@ This function generates a Job (and associated resources) which executes `consul
 acl bootstrap` on a new Consul cluster, and stores the bootstrap token
 information in a Secret.
 
-It is inspired by the official [Consul documentation](docs).
+It is inspired by the official [Consul documentation][docs].
 
 ## Getting Started
 

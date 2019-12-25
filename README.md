@@ -2,7 +2,7 @@
 
 # Kubernetes Configuration Functions
 
-The [config functions](config-functions) in this repo help you build a pipeline
+The [config functions][config-functions] in this repo help you build a pipeline
 of Kubernetes configuration files.
 
 For more information see the tested README examples for each config function:
