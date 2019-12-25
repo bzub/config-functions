@@ -3,9 +3,10 @@
 # Kubernetes Configuration Functions
 
 The [config functions][config-functions] in this repo help you build a pipeline
-of Kubernetes configuration files.
+for maintaining Kubernetes configuration files.
 
 For more information see the tested README examples for each config function:
 - [consul](/consul)
   - [consul/acl-bootstrap](/consul/acl-bootstrap)
   - [consul/gossip-encryption](/consul/gossip-encryption)
+  - [consul/agent-tls-encryption](/consul/agent-tls-encryption)
