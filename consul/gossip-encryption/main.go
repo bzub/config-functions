@@ -209,6 +209,9 @@ var jobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Metadata.Name }}
+  labels:
+    app.kubernetes.io/name: consul-gossip-encryption
+    app.kubernetes.io/instance: {{ .Metadata.Name }}
 spec:
   template:
     metadata:

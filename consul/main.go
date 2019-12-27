@@ -157,6 +157,9 @@ var configMapTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Metadata.Name }}
+  labels:
+    app.kubernetes.io/name: consul
+    app.kubernetes.io/instance: {{ .Metadata.Name }}
 data:
   00-defaults.hcl: |-
     acl = {
@@ -192,8 +195,6 @@ spec:
       labels:
         app.kubernetes.io/name: consul
         app.kubernetes.io/instance: {{ .Metadata.Name }}
-      annotations:
-        "consul.hashicorp.com/connect-inject": "false"
     spec:
       terminationGracePeriodSeconds: 10
       securityContext:

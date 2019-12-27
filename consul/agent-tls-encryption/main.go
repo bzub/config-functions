@@ -195,6 +195,9 @@ var configMapTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Spec.StatefulSetName }}
+  labels:
+    app.kubernetes.io/name: consul-agent-tls-encryption
+    app.kubernetes.io/instance: {{ .Metadata.Name }}
 data:
   00-default-agent-tls.json: |-
     {
@@ -218,6 +221,9 @@ var jobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Metadata.Name }}
+  labels:
+    app.kubernetes.io/name: consul-agent-tls-encryption
+    app.kubernetes.io/instance: {{ .Metadata.Name }}
 spec:
   template:
     metadata:
