@@ -36,16 +36,7 @@ func main() {
 
 // API is the function configuration spec.
 type API struct {
-	Metadata struct {
-		// Name is used for Resource metadata.name either directly or
-		// as a prefix. Also used for the app.kubernetes.io/instance
-		// annotation value.
-		Name string `yaml:"name"`
-
-		// Labels are merged into Resource metadata.labels and
-		// LabelSelectors.
-		Labels map[string]string `yaml:"labels"`
-	} `yaml:"metadata"`
+	Metadata *yaml.ObjectMeta
 }
 
 // filter implements kio.Filter
@@ -54,46 +45,6 @@ type filter struct {
 	api       *API
 	inputs    []*yaml.RNode
 	templates map[string]string
-}
-
-func (a *API) objectMeta() *yaml.ObjectMeta {
-	return &yaml.ObjectMeta{
-		Name:   a.Metadata.Name,
-		Labels: a.Metadata.Labels,
-	}
-}
-
-func (f *filter) API() *API {
-	return f.api
-}
-
-func (f *filter) Replicas() int {
-	replicas := 1
-
-	for _, r := range f.inputs {
-		meta, err := r.GetMeta()
-		if err != nil {
-			continue
-		}
-		if meta.Kind == "StatefulSet" && meta.Name == f.api.Metadata.Name {
-			value, err := r.Pipe(yaml.Lookup("spec", "replicas"))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-				os.Exit(1)
-			}
-			if value == nil {
-				continue
-			}
-
-			replicas, err = strconv.Atoi(value.YNode().Value)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-				os.Exit(1)
-			}
-		}
-	}
-
-	return replicas
 }
 
 // Filter generates Resources.
@@ -202,6 +153,46 @@ func (f *filter) defaultTemplates() map[string]string {
 		"dns-service": dnsServiceTemplate,
 		"ui-service":  uiServiceTemplate,
 	}
+}
+
+func (a *API) objectMeta() *yaml.ObjectMeta {
+	return &yaml.ObjectMeta{
+		Name:   a.Metadata.Name,
+		Labels: a.Metadata.Labels,
+	}
+}
+
+func (f *filter) API() *API {
+	return f.api
+}
+
+func (f *filter) Replicas() int {
+	replicas := 1
+
+	for _, r := range f.inputs {
+		meta, err := r.GetMeta()
+		if err != nil {
+			continue
+		}
+		if meta.Kind == "StatefulSet" && meta.Name == f.api.Metadata.Name {
+			value, err := r.Pipe(yaml.Lookup("spec", "replicas"))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			if value == nil {
+				continue
+			}
+
+			replicas, err = strconv.Atoi(value.YNode().Value)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+		}
+	}
+
+	return replicas
 }
 
 var configMapTemplate = `apiVersion: v1
