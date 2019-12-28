@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"text/template"
 
@@ -25,9 +24,7 @@ func main() {
 		Filters: []kio.Filter{
 			&filter{rw: rw},
 			&filters.MergeFilter{},
-			&filters.FileSetter{
-				FilenamePattern: filepath.Join("resources", "%n_%k.yaml"),
-			},
+			&filters.FileSetter{},
 		},
 		Outputs: []kio.Writer{rw},
 	}.Execute()
@@ -41,125 +38,176 @@ func main() {
 type API struct {
 	Metadata struct {
 		// Name is used for Resource metadata.name either directly or
-		// as a prefix.
+		// as a prefix. Also used for the app.kubernetes.io/instance
+		// annotation value.
 		Name string `yaml:"name"`
-	} `yaml:"metadata"`
 
-	Spec struct {
-		// Replicas is the number of StatefulSet replicas.
-		// Defaults to the REPLICAS env var, or 1
-		Replicas *int `yaml:"replicas"`
-	} `yaml:"spec"`
+		// Labels are merged into Resource metadata.labels and
+		// LabelSelectors.
+		Labels map[string]string `yaml:"labels"`
+	} `yaml:"metadata"`
 }
 
 // filter implements kio.Filter
 type filter struct {
-	rw *kio.ByteReadWriter
+	rw        *kio.ByteReadWriter
+	api       *API
+	inputs    []*yaml.RNode
+	templates map[string]string
+}
+
+func (a *API) objectMeta() *yaml.ObjectMeta {
+	return &yaml.ObjectMeta{
+		Name:   a.Metadata.Name,
+		Labels: a.Metadata.Labels,
+	}
+}
+
+func (f *filter) API() *API {
+	return f.api
+}
+
+func (f *filter) Replicas() int {
+	replicas := 1
+
+	for _, r := range f.inputs {
+		meta, err := r.GetMeta()
+		if err != nil {
+			continue
+		}
+		if meta.Kind == "StatefulSet" && meta.Name == f.api.Metadata.Name {
+			value, err := r.Pipe(yaml.Lookup("spec", "replicas"))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			if value == nil {
+				continue
+			}
+
+			replicas, err = strconv.Atoi(value.YNode().Value)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+		}
+	}
+
+	return replicas
 }
 
 // Filter generates Resources.
 func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
-	api := f.parseAPI()
+	f.inputs = in
 
-	// execute the configmap template
-	buff := &bytes.Buffer{}
-	t := template.Must(template.New("consul-cm").Parse(configMapTemplate))
-	if err := t.Execute(buff, api); err != nil {
+	if err := f.init(); err != nil {
 		return nil, err
 	}
-	cm, err := yaml.Parse(buff.String())
+
+	outputs, err := f.outputs()
 	if err != nil {
 		return nil, err
 	}
 
-	// execute the statefulset template
-	buff = &bytes.Buffer{}
-	t = template.Must(template.New("consul-sts").Parse(statefulSetTemplate))
-	if err := t.Execute(buff, api); err != nil {
-		return nil, err
-	}
-	sts, err := yaml.Parse(buff.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// execute the service template
-	buff = &bytes.Buffer{}
-	t = template.Must(template.New("consul-svc").Parse(serviceTemplate))
-	if err := t.Execute(buff, api); err != nil {
-		return nil, err
-	}
-	svc, err := yaml.Parse(buff.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// execute the dns service template
-	buff = &bytes.Buffer{}
-	t = template.Must(template.New("consul-svc-dns").Parse(dnsServiceTemplate))
-	if err := t.Execute(buff, api); err != nil {
-		return nil, err
-	}
-	dns, err := yaml.Parse(buff.String())
-	if err != nil {
-		return nil, err
-	}
-
-	// execute the ui service template
-	buff = &bytes.Buffer{}
-	t = template.Must(template.New("consul-svc-ui").Parse(uiServiceTemplate))
-	if err := t.Execute(buff, api); err != nil {
-		return nil, err
-	}
-	ui, err := yaml.Parse(buff.String())
-	if err != nil {
-		return nil, err
-	}
-
-	in = append(in, cm, sts, svc, dns, ui)
-	return in, nil
+	return append(in, outputs...), nil
 }
 
-// parseAPI parses the functionConfig into an API struct, and validates the
-// input.
-func (f *filter) parseAPI() API {
-	// parse the input function config
-	var api API
-	if err := yaml.Unmarshal([]byte(f.rw.FunctionConfig.MustString()), &api); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+// init parses the functionConfig into an API struct.
+func (f *filter) init() error {
+	if f.api == nil {
+		f.api = &API{}
 	}
 
-	// Default functionConfig values from environment variables if they are
-	// not set in the functionConfig
-	r := os.Getenv("REPLICAS")
-	if r != "" && api.Spec.Replicas == nil {
-		replicas, err := strconv.Atoi(r)
+	// Parse the function config and set defaults.
+	if err := yaml.Unmarshal([]byte(f.rw.FunctionConfig.MustString()), f.api); err != nil {
+		return err
+	}
+	if f.api.Metadata.Name == "" {
+		return fmt.Errorf("must specify metadata.name: \n%v\n",
+			f.rw.FunctionConfig.MustString())
+	}
+	if f.api.Metadata.Labels == nil {
+		f.api.Metadata.Labels = map[string]string{}
+	}
+	f.api.Metadata.Labels["app.kubernetes.io/name"] = "consul-server"
+	f.api.Metadata.Labels["app.kubernetes.io/instance"] = f.api.Metadata.Name
+
+	return nil
+}
+
+func (f *filter) outputs() ([]*yaml.RNode, error) {
+	if len(f.templates) == 0 {
+		f.templates = f.defaultTemplates()
+	}
+
+	outputs := []*yaml.RNode{}
+	for name, tmpl := range f.templates {
+		outR, err := f.parseNewTemplate(name, tmpl)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
+			return nil, err
 		}
-		api.Spec.Replicas = &replicas
-	}
-	if api.Spec.Replicas == nil {
-		r := 1
-		api.Spec.Replicas = &r
-	}
-	if api.Metadata.Name == "" {
-		fmt.Fprintf(os.Stderr, "must specify metadata.name\n")
-		os.Exit(1)
+
+		outputs = append(outputs, outR)
 	}
 
-	return api
+	outputs, err := f.populateMeta(outputs...)
+	if err != nil {
+		return nil, err
+	}
+
+	return outputs, nil
+}
+
+func (f *filter) parseNewTemplate(name, tmpl string) (*yaml.RNode, error) {
+	buff := &bytes.Buffer{}
+	t := template.Must(template.New(name).Parse(tmpl))
+	if err := t.Execute(buff, f); err != nil {
+		return nil, err
+	}
+	r, err := yaml.Parse(buff.String())
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func (f *filter) populateMeta(resources ...*yaml.RNode) ([]*yaml.RNode, error) {
+	for _, r := range resources {
+		rLabels, err := r.Pipe(yaml.LookupCreate(
+			yaml.MappingNode,
+			"metadata", "labels",
+		))
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range f.api.objectMeta().Labels {
+			err = rLabels.PipeE(
+				yaml.SetField(k, yaml.NewScalarRNode(v)),
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return resources, nil
+}
+
+func (f *filter) defaultTemplates() map[string]string {
+	return map[string]string{
+		"configmap":   configMapTemplate,
+		"statefulset": statefulSetTemplate,
+		"service":     serviceTemplate,
+		"dns-service": dnsServiceTemplate,
+		"ui-service":  uiServiceTemplate,
+	}
 }
 
 var configMapTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Metadata.Name }}
-  labels:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
+  name: {{ .API.Metadata.Name }}
 data:
   00-defaults.hcl: |-
     acl = {
@@ -176,25 +224,13 @@ data:
 var statefulSetTemplate = `apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Metadata.Name }}
-  labels:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
+  name: {{ .API.Metadata.Name }}
 spec:
-  selector:
-    matchLabels:
-      app.kubernetes.io/name: consul
-      app.kubernetes.io/instance: {{ .Metadata.Name }}
-  serviceName: {{ .Metadata.Name }}
+  serviceName: {{ .API.Metadata.Name }}
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
-  replicas: {{ .Spec.Replicas }}
   template:
-    metadata:
-      labels:
-        app.kubernetes.io/name: consul
-        app.kubernetes.io/instance: {{ .Metadata.Name }}
     spec:
       terminationGracePeriodSeconds: 10
       securityContext:
@@ -212,7 +248,7 @@ spec:
             - -config-dir=/consul/config
             - -data-dir=/consul/data
             - -ui
-            - -retry-join={{ .Metadata.Name }}.$(NAMESPACE).svc.cluster.local
+            - -retry-join={{ .API.Metadata.Name }}.$(NAMESPACE).svc.cluster.local
             - -server
           env:
             - name: POD_IP
@@ -224,7 +260,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: CONSUL_REPLICAS
-              value: "{{ .Spec.Replicas }}"
+              value: "{{ .Replicas }}"
           volumeMounts:
             - name: data
               mountPath: /consul/data
@@ -280,22 +316,16 @@ spec:
           emptyDir: {}
         - name: config
           configMap:
-            name: {{ .Metadata.Name }}
+            name: {{ .API.Metadata.Name }}
 `
 
 var serviceTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Metadata.Name }}
-  labels:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
+  name: {{ .API.Metadata.Name }}
 spec:
   clusterIP: None
   publishNotReadyAddresses: true
-  selector:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
   ports:
     - name: http
       port: 8500
@@ -332,14 +362,8 @@ spec:
 var dnsServiceTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Metadata.Name }}-dns
-  labels:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
+  name: {{ .API.Metadata.Name }}-dns
 spec:
-  selector:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
   ports:
     - name: dns-tcp
       port: 53
@@ -354,14 +378,8 @@ spec:
 var uiServiceTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Metadata.Name }}-ui
-  labels:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
+  name: {{ .API.Metadata.Name }}-ui
 spec:
-  selector:
-    app.kubernetes.io/name: consul
-    app.kubernetes.io/instance: {{ .Metadata.Name }}
   ports:
     - name: http
       port: 80

@@ -11,9 +11,9 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/local-config.yaml
+cat <<EOF >$DEMO/99-local-config.yaml
 apiVersion: config.kubernetes.io/v1beta1
-kind: ConsulLocalConfig
+kind: ConsulConfigFunction
 metadata:
   name: my-consul
   annotations:
@@ -21,8 +21,6 @@ metadata:
   configFn:
     container:
       image: gcr.io/config-functions/consul:v0.0.1
-spec:
-  replicas: 1
 EOF
 ```
 
@@ -38,11 +36,14 @@ The function generates the following resources.
 <!-- @verifyResourceCounts @test -->
 ```sh
 EXPECTED="\
-ConfigMap: 1
-Service: 3
-StatefulSet: 1"
+.
+├── [Resource]  Service my-consul-dns
+├── [Resource]  Service my-consul-ui
+├── [Resource]  ConfigMap my-consul
+├── [Resource]  Service my-consul
+└── [Resource]  StatefulSet my-consul"
 
-TEST="$(kustomize config cat $DEMO | kustomize config count)"
+TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -50,30 +51,42 @@ TEST="$(kustomize config cat $DEMO | kustomize config count)"
 
 ### Replicas
 
-The StatefulSet has one replica as defined in the function spec.
-<!-- @verifyStatefulSetReplicas1 @test -->
+The function does not set `.spec.replicas` on the Consul StatefulSet. If
+replicas is undefined, the function assumes one replica and sets other options
+accordingly.
+<!-- @verifyConsulReplicas1 @test -->
 ```sh
-EXPECTED="StatefulSet: 1"
+EXPECTED='.
+└── [Resource]  StatefulSet my-consul
+    └── spec.template.spec.containers
+        └── 0
+            └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "1"}'
 
-TEST="$(kustomize config grep "spec.replicas=1" $DEMO |\
-  kustomize config grep "spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS].value=1" |\
-  kustomize config count)"
+TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
+  kustomize config tree --graph-structure=owners --replicas \
+    --field="spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS]")"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
-For high availability, increase the number of replicas in the generated
-StatefulSet config. The `-bootstrap-expect` flag passed to consul will be
-automatically updated via the CONSUL_REPLICAS environment variable.
-<!-- @verifyStatefulSetReplicas3 @test -->
+If you change the number of replicas in the generated Resource config, re-run
+the function to ensure other parts of the config get updated as well.
+<!-- @verifyConsulReplicas3 @test -->
 ```sh
-sed -i 's/replicas: 1/replicas: 3/' "$DEMO/local-config.yaml"
+# Add a replicas field to the StatefulSet spec.
+sed -i '/^spec:$/a \  replicas: 3' $DEMO/my-consul_statefulset.yaml
 kustomize config run $DEMO
 
-EXPECTED="StatefulSet: 1"
+EXPECTED='.
+└── [Resource]  StatefulSet my-consul
+    ├── spec.replicas: 3
+    └── spec.template.spec.containers
+        └── 0
+            └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "3"}'
 
-TEST="$(kustomize config grep "spec.replicas=3" $DEMO |\
-  kustomize config grep "spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS].value=3" |\
-  kustomize config count)"
+TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
+  kustomize config tree --graph-structure=owners --replicas \
+    --field="spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS]")"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
