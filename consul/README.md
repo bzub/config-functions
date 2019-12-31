@@ -15,7 +15,10 @@ cat <<EOF >$DEMO/99-local-config.yaml
 apiVersion: config.kubernetes.io/v1beta1
 kind: ConsulConfigFunction
 metadata:
-  name: my-consul
+  name: my-consul-server
+  namespace: example
+  labels:
+    app.kubernetes.io/instance: my-consul
   annotations:
     config.kubernetes.io/local-config: "true"
   configFn:
@@ -24,7 +27,7 @@ metadata:
 EOF
 ```
 
-Generate Resources from `local-config.yaml`.
+Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
 kustomize config run $DEMO
@@ -33,17 +36,16 @@ kustomize config run $DEMO
 ## Generated Resources
 
 The function generates the following resources.
-<!-- @verifyResourceCounts @test -->
+<!-- @verifyResources @test -->
 ```sh
-EXPECTED="\
-.
-├── [Resource]  Service my-consul-dns
-├── [Resource]  Service my-consul-ui
-├── [Resource]  ConfigMap my-consul
-├── [Resource]  Service my-consul
-└── [Resource]  StatefulSet my-consul"
+EXPECTED='.
+├── [Resource]  Service example/my-consul-server-dns
+├── [Resource]  Service example/my-consul-server-ui
+├── [Resource]  ConfigMap example/my-consul-server
+├── [Resource]  Service example/my-consul-server
+└── [Resource]  StatefulSet example/my-consul-server'
 
-TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
+TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -57,7 +59,7 @@ accordingly.
 <!-- @verifyConsulReplicas1 @test -->
 ```sh
 EXPECTED='.
-└── [Resource]  StatefulSet my-consul
+└── [Resource]  StatefulSet example/my-consul-server
     └── spec.template.spec.containers
         └── 0
             └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "1"}'
@@ -73,11 +75,11 @@ the function to ensure other parts of the config get updated as well.
 <!-- @verifyConsulReplicas3 @test -->
 ```sh
 # Add a replicas field to the StatefulSet spec.
-sed -i '/^spec:$/a \  replicas: 3' $DEMO/my-consul_statefulset.yaml
+sed -i '/^spec:$/a \  replicas: 3' $DEMO/my-consul-server_statefulset.yaml
 kustomize config run $DEMO
 
 EXPECTED='.
-└── [Resource]  StatefulSet my-consul
+└── [Resource]  StatefulSet example/my-consul-server
     ├── spec.replicas: 3
     └── spec.template.spec.containers
         └── 0
@@ -86,7 +88,6 @@ EXPECTED='.
 TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
   kustomize config tree --graph-structure=owners --replicas \
     --field="spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS]")"
-echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

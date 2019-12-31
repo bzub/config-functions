@@ -15,34 +15,40 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/local-config.yaml
+cat <<EOF >$DEMO/99-local-config.yaml
 apiVersion: config.kubernetes.io/v1beta1
 kind: ConsulConfigFunction
 metadata:
-  name: my-consul
+  name: my-consul-server
+  namespace: example
+  labels:
+    app.kubernetes.io/instance: my-consul
   annotations:
     config.kubernetes.io/local-config: "true"
   configFn:
     container:
       image: gcr.io/config-functions/consul:v0.0.1
-spec:
-  replicas: 1
 ---
 apiVersion: config.kubernetes.io/v1beta1
 kind: ConsulACLBootstrapConfigFunction
 metadata:
   name: my-consul-acl-bootstrap
+  namespace: example
+  labels:
+    app.kubernetes.io/instance: my-consul
   annotations:
     config.kubernetes.io/local-config: "true"
   configFn:
     container:
       image: gcr.io/config-functions/consul-acl-bootstrap:v0.0.1
-spec:
-  serviceName: my-consul-dns
 EOF
 ```
 
-Generate Resources from `local-config.yaml`.
+The `app.kubernetes.io/instance` label tells the function to target `my-consul`
+Resource config instances, which are managed by the `ConsulConfigFunction`
+config function.
+
+Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
 kustomize config run $DEMO
@@ -53,17 +59,16 @@ kustomize config run $DEMO
 The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
-EXPECTED="\
-.
-├── [Resource]  Job my-consul-acl-bootstrap
-├── [Resource]  Role my-consul-acl-bootstrap
-├── [Resource]  RoleBinding my-consul-acl-bootstrap
-├── [Resource]  ServiceAccount my-consul-acl-bootstrap
-├── [Resource]  Service my-consul-dns
-├── [Resource]  Service my-consul-ui
-├── [Resource]  ConfigMap my-consul
-├── [Resource]  Service my-consul
-└── [Resource]  StatefulSet my-consul"
+EXPECTED='.
+├── [Resource]  Job example/my-consul-acl-bootstrap
+├── [Resource]  Role example/my-consul-acl-bootstrap
+├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
+├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  Service example/my-consul-server-dns
+├── [Resource]  Service example/my-consul-server-ui
+├── [Resource]  ConfigMap example/my-consul-server
+├── [Resource]  Service example/my-consul-server
+└── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(kustomize config tree --graph-structure owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]

@@ -1,10 +1,17 @@
 FROM golang:1.13-stretch
 ENV CGO_ENABLED=0
-WORKDIR /go/src/
-COPY go.mod .
-COPY go.sum .
+
+WORKDIR /go/src/cfunc
+COPY cfunc/go.mod .
+COPY cfunc/go.sum .
 RUN go mod download
-COPY *.go .
+COPY cfunc/*.go ./
+
+WORKDIR /go/src/config-function/sub1
+COPY consul/gossip-encryption/go.mod .
+COPY consul/gossip-encryption/go.sum .
+RUN go mod download
+COPY consul/gossip-encryption/*.go ./
 RUN go build -v -o /usr/local/bin/config-function ./
 
 FROM alpine:latest
