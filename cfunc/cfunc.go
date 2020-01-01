@@ -1,15 +1,19 @@
 package cfunc
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"text/template"
 
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
+// CFunc is an opinionated config function helper.
 type CFunc struct {
-	RW *kio.ByteReadWriter
+	RW   *kio.ByteReadWriter
+	name string
 }
 
 // VerifyMeta validates the function config's metadata and sets
@@ -38,9 +42,9 @@ func (f *CFunc) VerifyMeta(appName string) error {
 	return nil
 }
 
-// IsManagedResource checks if a given resource matches indicators which tell
+// isManagedResource checks if a given resource matches indicators which tell
 // us it should be managed by this config function.
-func (f *CFunc) IsManagedResource(r *yaml.RNode) (bool, error) {
+func (f *CFunc) isManagedResource(r *yaml.RNode) (bool, error) {
 	// Get Resource and Config Function metadata.
 	rMeta, err := r.GetMeta()
 	if err != nil {
@@ -67,7 +71,7 @@ func (f *CFunc) IsManagedResource(r *yaml.RNode) (bool, error) {
 func (f *CFunc) ManagedResources(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	managedRs := []*yaml.RNode{}
 	for _, r := range in {
-		ok, err := f.IsManagedResource(r)
+		ok, err := f.isManagedResource(r)
 		if err != nil {
 			return nil, err
 		}
@@ -79,8 +83,26 @@ func (f *CFunc) ManagedResources(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	return managedRs, nil
 }
 
-// SetLabels ensures the config function's labels/values are set on a Resource.
-func (f *CFunc) SetLabels(r *yaml.RNode) error {
+// SetMetadata sets labels, selectors and namespace from the CFunc onto given
+// Resources.
+func (f *CFunc) SetMetadata(in []*yaml.RNode) error {
+	for _, r := range in {
+		// Set labels from config function to resources.
+		if err := f.setLabels(r); err != nil {
+			return err
+		}
+
+		// Set namespace from config function to resources.
+		if err := f.setNamespace(r); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// setLabels ensures the config function's labels/values are set on a Resource.
+func (f *CFunc) setLabels(r *yaml.RNode) error {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return err
@@ -203,8 +225,8 @@ func (f *CFunc) SetLabels(r *yaml.RNode) error {
 	return nil
 }
 
-// SetNamespace ensures the config function's namespace is set on a Resource.
-func (f *CFunc) SetNamespace(r *yaml.RNode) error {
+// setNamespace ensures the config function's namespace is set on a Resource.
+func (f *CFunc) setNamespace(r *yaml.RNode) error {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return err
@@ -226,4 +248,23 @@ func (f *CFunc) SetNamespace(r *yaml.RNode) error {
 	rNamespace.YNode().SetString(fnMeta.Namespace)
 
 	return nil
+}
+
+func ParseTemplates(tmpls map[string]string, data interface{}) ([]*yaml.RNode, error) {
+	templateRs := []*yaml.RNode{}
+	for name, tmpl := range tmpls {
+		buff := &bytes.Buffer{}
+		t := template.Must(template.New(name).Parse(tmpl))
+		if err := t.Execute(buff, data); err != nil {
+			return nil, err
+		}
+		r, err := yaml.Parse(buff.String())
+		if err != nil {
+			return nil, err
+		}
+
+		templateRs = append(templateRs, r)
+	}
+
+	return templateRs, nil
 }

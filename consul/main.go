@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"strconv"
-	"text/template"
 
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/kio/filters"
@@ -75,32 +73,14 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	// Generate Resources from templates.
-	templateRs := []*yaml.RNode{}
-	for name, tmpl := range f.defaultTemplates() {
-		buff := &bytes.Buffer{}
-		t := template.Must(template.New(name).Parse(tmpl))
-		if err := t.Execute(buff, data); err != nil {
-			return nil, err
-		}
-		r, err := yaml.Parse(buff.String())
-		if err != nil {
-			return nil, err
-		}
-
-		templateRs = append(templateRs, r)
+	templateRs, err := cfunc.ParseTemplates(f.defaultTemplates(), data)
+	if err != nil {
+		return nil, err
 	}
 
 	// Set function config metadata on generated Resources.
-	for _, r := range templateRs {
-		// Set labels from config function to resources.
-		if err := f.SetLabels(r); err != nil {
-			return nil, err
-		}
-
-		// Set namespace from config function to resources.
-		if err := f.SetNamespace(r); err != nil {
-			return nil, err
-		}
+	if err := f.SetMetadata(templateRs); err != nil {
+		return nil, err
 	}
 
 	// Merge our templated Resources into the input Resources.
