@@ -1,4 +1,4 @@
-module github.com/bzub/config-functions/cfunc
+module github.com/bzub/config-functions
 
 go 1.13
 
