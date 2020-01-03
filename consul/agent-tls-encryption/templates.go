@@ -137,16 +137,23 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              secret="{{ .Name }}"
               tls_dir="/tls/generated"
+              prefix="{{ .Name }}"
 
-              if [ ! "$(kubectl get secret --no-headers "${secret}"|wc -l)" = "0" ]; then
-                echo "[INFO] \"secret/${secret}\" already exists. Exiting."
-                exit 0
-              fi
-
+              secret="${prefix}"
               echo "[INFO] Creating \"secret/${secret}\"."
-              kubectl create secret generic "--from-file=${tls_dir}" "${secret}"
+              kubectl create secret generic "${secret}" "--from-file=${tls_dir}"
+
+              secret="${prefix}-client-ca"
+              echo "[INFO] Creating \"secret/${secret}\"."
+              kubectl create secret generic "${secret}" \
+                "--from-file=${tls_dir}/consul-agent-ca.pem"
+
+              secret="${prefix}-cli"
+              echo "[INFO] Creating \"secret/${secret}\"."
+              kubectl create secret generic "${secret}" \
+                "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
+                "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
           volumeMounts:
             - mountPath: /tls/generated
               name: tls-generated
