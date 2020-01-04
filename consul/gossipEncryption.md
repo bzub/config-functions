@@ -1,6 +1,6 @@
 [docs]: https://learn.hashicorp.com/consul/security-networking/agent-encryption
 
-# Consul Gossip Encryption Config Function
+# Consul Gossip Encryption
 
 With `spec.gossipEncryption.enabled=true` the Consul config function creates a
 Job which creates a Consul gossip encryption key Secret, and configures a

@@ -32,10 +32,6 @@ type templateData struct {
 	// Replicas is the number of configured Consul server replicas. Used
 	// for other options like --bootstrap-expect.
 	Replicas int
-
-	// StatefulSetName is the name of the Consul server StatefulSet to
-	// target for patching.
-	StatefulSetName string
 }
 
 func main() {
@@ -136,9 +132,8 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 
 	// Defaults
 	data := &templateData{
-		ObjectMeta:      &fnMeta.ObjectMeta,
-		Replicas:        1,
-		StatefulSetName: fnMeta.Name,
+		ObjectMeta: &fnMeta.ObjectMeta,
+		Replicas:   1,
 	}
 
 	if sts == nil {
@@ -146,14 +141,6 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 		// generated).
 		return data, nil
 	}
-
-	stsMeta, err := sts.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-
-	// Use the provided StatefulSet name for template data.
-	data.StatefulSetName = stsMeta.Name
 
 	// Find the number of replicas for the workload being managed. Defaults
 	// to 1 if replicas is omitted in the input Resource config.
@@ -225,7 +212,6 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 		}
 	}
 	if sts == nil {
-		// return nil, fmt.Errorf("StatefulSet not found.")
 		return nil, nil
 	}
 
