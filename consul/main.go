@@ -91,16 +91,16 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		return nil, err
 	}
 
-	if f.gossipEnabled() {
-		// Use templateRs StatefulSet.
-		sts, err = getConsulStatefulSet(templateRs)
-		if err != nil {
-			return nil, err
-		}
+	// Get templated patch StatefulSet.
+	stsPatchR, err := getConsulStatefulSet(templateRs)
+	if err != nil {
+		return nil, err
+	}
 
+	if f.gossipEnabled() {
 		// Add gossip encryption config secret volume to Consul server
 		// StatefulSet.
-		if err := f.injectGossipSecretVolume(sts); err != nil {
+		if err := f.injectGossipSecretVolume(stsPatchR); err != nil {
 			return nil, err
 		}
 
@@ -111,6 +111,16 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 
 		templateRs = append(templateRs, gossipRs...)
+	}
+
+	if f.agentTLSEnabled() {
+		// Generate agent TLS Resources from templates.
+		tlsRs, err := cfunc.ParseTemplates(f.tlsTemplates(), data)
+		if err != nil {
+			return nil, err
+		}
+
+		templateRs = append(templateRs, tlsRs...)
 	}
 
 	// Set function config metadata on generated Resources.
@@ -222,7 +232,18 @@ func (f *filter) gossipEnabled() bool {
 	enabled, _ := f.RW.FunctionConfig.Pipe(
 		yaml.Lookup("spec", "gossipEncryption", "enabled"),
 	)
-	if enabled.Document().Value == "true" {
+	if enabled != nil && enabled.Document().Value == "true" {
+		return true
+	}
+
+	return false
+}
+
+func (f *filter) agentTLSEnabled() bool {
+	enabled, _ := f.RW.FunctionConfig.Pipe(
+		yaml.Lookup("spec", "agentTLSEncryption", "enabled"),
+	)
+	if enabled != nil && enabled.Document().Value == "true" {
 		return true
 	}
 
