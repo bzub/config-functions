@@ -7,5 +7,3 @@ for maintaining Kubernetes configuration files.
 
 For more information see the tested README examples for each config function:
 - [consul](/consul)
-  - [consul/acl-bootstrap](/consul/acl-bootstrap)
-  - [consul/agent-tls-encryption](/consul/agent-tls-encryption)

@@ -1,10 +1,10 @@
 [docs]: https://learn.hashicorp.com/consul/day-0/acl-guide
 
-# Consul ACL Bootstrap Config Function
+# Consul ACL Bootstrap
 
-This function generates a Job (and associated resources) which executes `consul
-acl bootstrap` on a new Consul cluster, and stores the bootstrap token
-information in a Secret.
+With `spec.aclBootstrap.enabled=true` the Consul config function generates a
+Job (and associated resources) which executes `consul acl bootstrap` on a new
+Consul cluster, and stores the bootstrap token information in a Secret.
 
 It is inspired by the official [Consul documentation][docs].
 
@@ -27,26 +27,12 @@ metadata:
     config.kubernetes.io/local-config: "true"
   configFn:
     container:
-      image: gcr.io/config-functions/consul:v0.0.1
----
-apiVersion: config.kubernetes.io/v1beta1
-kind: ConsulACLBootstrapConfigFunction
-metadata:
-  name: my-consul-acl-bootstrap
-  namespace: example
-  labels:
-    app.kubernetes.io/instance: my-consul
-  annotations:
-    config.kubernetes.io/local-config: "true"
-  configFn:
-    container:
-      image: gcr.io/config-functions/consul-acl-bootstrap:v0.0.1
+      image: gcr.io/config-functions/consul:v0.0.2
+spec:
+  aclBootstrap:
+    enabled: true
 EOF
 ```
-
-The `app.kubernetes.io/instance` label tells the function to target `my-consul`
-Resource config instances, which are managed by the `ConsulConfigFunction`
-config function.
 
 Generate Resources.
 <!-- @generateInitialResources @test -->
@@ -60,10 +46,10 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  Job example/my-consul-acl-bootstrap
-├── [Resource]  Role example/my-consul-acl-bootstrap
-├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
-├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  Job example/my-consul-server-acl-bootstrap
+├── [Resource]  Role example/my-consul-server-acl-bootstrap
+├── [Resource]  RoleBinding example/my-consul-server-acl-bootstrap
+├── [Resource]  ServiceAccount example/my-consul-server-acl-bootstrap
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  ConfigMap example/my-consul-server

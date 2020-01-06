@@ -123,6 +123,16 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		templateRs = append(templateRs, tlsRs...)
 	}
 
+	if f.aclBootstrapEnabled() {
+		// Generate ACL bootstrap Resources from templates.
+		aclRs, err := cfunc.ParseTemplates(f.aclJobTemplates(), data)
+		if err != nil {
+			return nil, err
+		}
+
+		templateRs = append(templateRs, aclRs...)
+	}
+
 	// Set function config metadata on generated Resources.
 	if err := f.SetMetadata(templateRs); err != nil {
 		return nil, err
@@ -242,6 +252,17 @@ func (f *filter) gossipEnabled() bool {
 func (f *filter) agentTLSEnabled() bool {
 	enabled, _ := f.RW.FunctionConfig.Pipe(
 		yaml.Lookup("spec", "agentTLSEncryption", "enabled"),
+	)
+	if enabled != nil && enabled.Document().Value == "true" {
+		return true
+	}
+
+	return false
+}
+
+func (f *filter) aclBootstrapEnabled() bool {
+	enabled, _ := f.RW.FunctionConfig.Pipe(
+		yaml.Lookup("spec", "aclBootstrap", "enabled"),
 	)
 	if enabled != nil && enabled.Document().Value == "true" {
 		return true
