@@ -1,12 +1,10 @@
-[docs]: https://learn.hashicorp.com/consul/day-0/acl-guide
+[consul]: https://www.consul.io/
 
-# Consul ACL Bootstrap
+# Consul Configuration Function Production Example
 
-With `spec.aclBootstrap.enabled=true` the Consul config function generates a
-Job (and associated resources) which executes `consul acl bootstrap` on a new
-Consul cluster, and stores the bootstrap token information in a Secret.
-
-It is inspired by the official [Consul documentation][docs].
+Creates Resource configs to deploy [Consul][consul] on Kubernetes, using the
+[more advanced features](./README.md#function-features) of the Consul config
+function.
 
 ## Getting Started
 
@@ -29,6 +27,10 @@ metadata:
     container:
       image: gcr.io/config-functions/consul:v0.0.2
 spec:
+  gossipEncryption:
+    enabled: true
+  agentTLSEncryption:
+    enabled: true
   aclBootstrap:
     enabled: true
 EOF
@@ -50,7 +52,15 @@ EXPECTED='.
 ├── [Resource]  Role example/my-consul-server-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-server-acl-bootstrap
 ├── [Resource]  ServiceAccount example/my-consul-server-acl-bootstrap
+├── [Resource]  Job example/my-consul-server-agent-tls
+├── [Resource]  Role example/my-consul-server-agent-tls
+├── [Resource]  RoleBinding example/my-consul-server-agent-tls
+├── [Resource]  ServiceAccount example/my-consul-server-agent-tls
 ├── [Resource]  Service example/my-consul-server-dns
+├── [Resource]  Job example/my-consul-server-gossip-encryption
+├── [Resource]  Role example/my-consul-server-gossip-encryption
+├── [Resource]  RoleBinding example/my-consul-server-gossip-encryption
+├── [Resource]  ServiceAccount example/my-consul-server-gossip-encryption
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  ConfigMap example/my-consul-server
 ├── [Resource]  Service example/my-consul-server
