@@ -2,6 +2,7 @@
 [gossip-encryption]: https://learn.hashicorp.com/consul/security-networking/agent-encryption
 [agent-tls]: https://learn.hashicorp.com/consul/security-networking/certificates
 [acl-bootstrap]: https://learn.hashicorp.com/consul/day-0/acl-guide
+[agent-sidecar]: https://www.consul.io/docs/agent/basics.html
 
 # Consul Configuration Function
 
@@ -130,3 +131,14 @@ Consul cluster, and stores the bootstrap token information in a Secret.
 High Availability via Services backed by StatefulSet replicas. The function
 takes care of ensuring various settings are updated depending on how you
 configure the StatefulSet.
+
+### [Agent Sidecar Injector][agent-sidecar]
+
+With `spec.agentSidecarInjector.enabled=true` the Consul config function adds a
+Consul Agent sidecar container to workload configs that contain the
+`config.bzub.dev/consul-agent-sidecar-injector` annotation with a value that
+targets the desired Consul server instance.
+
+For an example see the [sidecar injector
+annotation](./productionExample.md#sidecar-injector-annotation) section of the
+[production example](./productionExample.md).

@@ -14,10 +14,7 @@ import (
 	"github.com/bzub/config-functions/cfunc"
 )
 
-var projectedVolumeSecretTemplate = `
-- secret:
-    name: {{ .Name }}-gossip-encryption
-`
+const casiAnnotation = "config.bzub.dev/consul-agent-sidecar-injector"
 
 // filter implements kio.Filter
 type filter struct {
@@ -32,6 +29,25 @@ type templateData struct {
 	// Replicas is the number of configured Consul server replicas. Used
 	// for other options like --bootstrap-expect.
 	Replicas int
+}
+
+// sidecarTemplateData holds information used in agent sidecar patches.
+type sidecarTemplateData struct {
+	// ResourceMeta contains Resource metadata from a workload to be
+	// patched.
+	yaml.ResourceMeta
+
+	// ConsulServiceFQDN is the Consul server endpoint the agent should
+	// use.
+	ConsulServiceFQDN string
+
+	// ConsulName is the name of the Consul server Resources for the agent.
+	// Used for ConfigMap/Secret name prefixes.
+	ConsulName string
+
+	// ConsulNamespace is the namespace of the Consul server Resources for
+	// the agent.  Used for ConfigMap/Secret name prefixes.
+	ConsulNamespace string
 }
 
 func main() {
@@ -138,6 +154,37 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		return nil, err
 	}
 
+	if f.agentSidecarInjectorEnabled() {
+		// Create sidecar injection patches.
+		sidecarPatches, err := f.getSidecarPatches(in)
+		if err != nil {
+			return nil, err
+		}
+		templateRs = append(templateRs, sidecarPatches...)
+
+		if f.agentTLSEnabled() {
+			sidecarTLSCMs, err := f.getSidecarTLSCMs(sidecarPatches)
+			if err != nil {
+				return nil, err
+			}
+			templateRs = append(templateRs, sidecarTLSCMs...)
+
+			if err := requireSidecarTLSVolumes(sidecarPatches); err != nil {
+				return nil, err
+			}
+		}
+
+		if f.gossipEnabled() {
+			// Add gossip encryption config secret volume to Consul
+			// agent sidecars.
+			for _, scp := range sidecarPatches {
+				if err := f.injectGossipSecretVolume(scp); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	// Merge our templated Resources into the input Resources.
 	return append(in, templateRs...), nil
 }
@@ -179,7 +226,7 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 }
 
 // injectGossipSecretVolume adds the gossip encryption Consul config secret as
-// a projected volume source to the Consul server Resource config.
+// a projected volume source to the Consul agent Resource config.
 //
 // TODO: Strategic merge patch seems to replace rather than merge projected
 // volume sources. This should be in the patch variable and this function
@@ -193,7 +240,7 @@ func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 
 	// Execute the projected volume source template.
 	buff := &bytes.Buffer{}
-	t := template.Must(template.New("gossip-pvs").Parse(projectedVolumeSecretTemplate))
+	t := template.Must(template.New("gossip-pvs").Parse(gossipSecretVolumeTemplate))
 	if err := t.Execute(buff, data); err != nil {
 		return err
 	}
@@ -202,11 +249,11 @@ func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 		return err
 	}
 
-	// Add secret volume to StatefulSet.
+	// Add secret volume to projected volume.
 	err = sts.PipeE(
 		yaml.Lookup(
 			"spec", "template", "spec", "volumes",
-			"[name=configs]", "projected", "sources",
+			"[name=consul-configs]", "projected", "sources",
 		),
 		yaml.Append(vol.YNode().Content...),
 	)
@@ -269,4 +316,180 @@ func (f *filter) aclBootstrapEnabled() bool {
 	}
 
 	return false
+}
+
+func (f *filter) agentSidecarInjectorEnabled() bool {
+	enabled, _ := f.RW.FunctionConfig.Pipe(
+		yaml.Lookup("spec", "agentSidecarInjector", "enabled"),
+	)
+	if enabled != nil && enabled.Document().Value == "true" {
+		return true
+	}
+
+	return false
+}
+
+// getSidecarPatches returns patches with a sidecar added.
+func (f *filter) getSidecarPatches(in []*yaml.RNode) ([]*yaml.RNode, error) {
+	// Get resources that are calling for sidecar injection.
+	sidecarRs, err := sidecarResources(in)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a patch for each resource.
+	sidecarPatches := []*yaml.RNode{}
+	for r, c := range sidecarRs {
+		p, err := f.getSidecarPatch(in, r, c)
+		if err != nil {
+			return nil, err
+		}
+		sidecarPatches = append(sidecarPatches, p)
+	}
+
+	return sidecarPatches, nil
+}
+
+// sidecarResources returns a map of resources/configs from in that have the
+// config.bzub.dev/consul-agent-sidecar-injector annotation.
+func sidecarResources(in []*yaml.RNode) (map[*yaml.RNode]*yaml.RNode, error) {
+	sidecarRs := make(map[*yaml.RNode]*yaml.RNode)
+	for _, r := range in {
+		aValue, err := r.Pipe(yaml.GetAnnotation(casiAnnotation))
+		if err != nil {
+			return nil, err
+		}
+		if aValue == nil {
+			continue
+		}
+
+		config, err := yaml.Parse(aValue.Document().Value)
+		if err != nil {
+			return nil, err
+		}
+		sidecarRs[r] = config
+	}
+
+	return sidecarRs, nil
+}
+
+// getSidecarPatch returns a patch with a sidecar added.
+func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine if sidecar injector config name matches this Consul
+	// instance.
+	cName, err := c.Pipe(yaml.Lookup("metadata", "name"))
+	if err != nil {
+		return nil, err
+	}
+	if cName == nil {
+		return nil, fmt.Errorf("metadata.name missing in config.")
+	}
+	if cName.Document().Value != fnMeta.Name {
+		return nil, nil
+	}
+
+	// Determine if sidecar injector config namespace matches this
+	// Consul instance.
+	cNS, err := c.Pipe(yaml.Lookup("metadata", "namespace"))
+	if err != nil {
+		return nil, err
+	}
+	if cNS == nil {
+		return nil, fmt.Errorf("metadata.namespace missing in config.")
+	}
+	if cNS.Document().Value != fnMeta.Namespace {
+		return nil, nil
+	}
+
+	// Populate Consul server specific template data.
+	data := &sidecarTemplateData{}
+	data.ConsulName = fnMeta.Name
+	data.ConsulNamespace = fnMeta.Namespace
+	data.ConsulServiceFQDN = fmt.Sprintf(
+		"%v.%v.svc.cluster.local", fnMeta.Name, fnMeta.Namespace,
+	)
+
+	// Populate resource specific patch template data.
+	data.ResourceMeta, err = r.GetMeta()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the patch from template.
+	buff := &bytes.Buffer{}
+	t := template.Must(template.New("patch").Parse(sidecarPatchTemplate))
+	if err := t.Execute(buff, data); err != nil {
+		return nil, err
+	}
+	p, err := yaml.Parse(buff.String())
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (f *filter) getSidecarTLSCMs(in []*yaml.RNode) ([]*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
+	}
+	data := &sidecarTemplateData{}
+	data.ConsulName = fnMeta.Name
+	data.ConsulNamespace = fnMeta.Namespace
+
+	// Create a ConfigMap for each resource. Redundant CMs will be merged
+	// together later.
+	cms := []*yaml.RNode{}
+	for _, r := range in {
+		data.ResourceMeta, err = r.GetMeta()
+		if err != nil {
+			return nil, err
+		}
+
+		// Create the ConfigMap from template.
+		buff := &bytes.Buffer{}
+		t := template.Must(template.New("cm").Parse(sidecarTLSCMTemplate))
+		if err := t.Execute(buff, data); err != nil {
+			return nil, err
+		}
+		cm, err := yaml.Parse(buff.String())
+		if err != nil {
+			return nil, err
+		}
+
+		cms = append(cms, cm)
+	}
+
+	return cms, nil
+}
+
+func requireSidecarTLSVolumes(in []*yaml.RNode) error {
+	for _, r := range in {
+		optional, err := r.Pipe(
+			yaml.Lookup(
+				"spec", "template", "spec", "volumes",
+				"[name=consul-tls-secret]", "secret", "optional",
+			),
+		)
+		if err != nil {
+			return err
+		}
+		if optional == nil {
+			return fmt.Errorf("Unable to find consul-tls-secret volume.")
+		}
+
+		if err := optional.PipeE(
+			yaml.Set(yaml.NewScalarRNode("false")),
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -97,9 +97,9 @@ spec:
             - name: CONSUL_REPLICAS
               value: "{{ .Replicas }}"
           volumeMounts:
-            - name: data
+            - name: consul-data
               mountPath: /consul/data
-            - name: configs
+            - name: consul-configs
               mountPath: /consul/config
           lifecycle:
             preStop:
@@ -147,9 +147,9 @@ spec:
             successThreshold: 1
             timeoutSeconds: 5
       volumes:
-        - name: data
+        - name: consul-data
           emptyDir: {}
-        - name: configs
+        - name: consul-configs
           projected:
             sources:
               - configMap:
@@ -223,6 +223,11 @@ spec:
       targetPort: 8500
 `
 
+var gossipSecretVolumeTemplate = `
+- secret:
+    name: {{ .Name }}-{{ .Namespace }}-gossip
+`
+
 var gossipJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
@@ -256,7 +261,7 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              secret="{{ .Name }}-gossip-encryption"
+              secret="{{ .Name }}-{{ .Namespace }}-gossip"
               config_dir="/config/generated"
 
               if [ ! "$(kubectl get secret --no-headers "${secret}"|wc -l)" = "0" ]; then
@@ -369,7 +374,7 @@ spec:
       volumes:
         - name: tls-secret
           secret:
-            secretName: {{ .Name }}-agent-tls
+            secretName: {{ .Name }}-{{ .Namespace }}-agent-tls
         - name: tls
           emptyDir: {}
 `
@@ -431,13 +436,13 @@ spec:
             - -ec
             - |-
               tls_dir="/tls/generated"
-              prefix="{{ .Name }}-agent-tls"
+              prefix="{{ .Name }}-{{ .Namespace }}-agent-tls"
 
               secret="${prefix}"
               echo "[INFO] Creating \"secret/${secret}\"."
               kubectl create secret generic "${secret}" "--from-file=${tls_dir}"
 
-              secret="${prefix}-client-ca"
+              secret="${prefix}-ca"
               echo "[INFO] Creating \"secret/${secret}\"."
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/consul-agent-ca.pem"
@@ -593,4 +598,70 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: {{ .Name }}-acl-bootstrap
+`
+
+var sidecarPatchTemplate = `apiVersion: {{ .APIVersion }}
+kind: {{ .Kind }}
+metadata:
+  name: {{ .ObjectMeta.Name }}
+  namespace: {{ .ObjectMeta.Namespace }}
+spec:
+  template:
+    spec:
+      containers:
+        - name: consul-agent
+          image: docker.io/library/consul:1.6.2
+          command:
+            - consul
+            - agent
+            - -bind=$(POD_IP)
+            - -retry-join={{ .ConsulServiceFQDN }}
+            - -data-dir=/consul/data
+            - -config-dir=/consul/configs
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: consul-data
+              mountPath: /consul/data
+            - name: consul-configs
+              mountPath: /consul/configs
+            - name: consul-tls-secret
+              mountPath: /consul/tls
+      volumes:
+        - name: consul-data
+          emptyDir: {}
+        - name: consul-tls
+          emptyDir: {}
+        - name: consul-configs
+          projected:
+            sources:
+              - configMap:
+                  name: {{ .ConsulName }}-{{ .ConsulNamespace }}-tls
+                  optional: true
+        - name: consul-tls-secret
+          secret:
+            secretName: {{ .ConsulName }}-{{ .ConsulNamespace }}-agent-tls-ca
+            optional: true
+`
+
+var sidecarTLSCMTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .ConsulName }}-{{ .ConsulNamespace }}-tls
+  namespace: {{ .ObjectMeta.Namespace }}
+data:
+  00-default-agent-tls.json: |-
+    {
+      "auto_encrypt": {
+        "tls": true
+      },
+      "ca_file": "/consul/tls/consul-agent-ca.pem",
+      "ports": {
+        "http": -1,
+        "https": 8501
+      }
+    }
 `
