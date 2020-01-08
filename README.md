@@ -1,4 +1,4 @@
-[config-functions]: https://github.com/kubernetes-sigs/kustomize/blob/283ec677ee8c0a976e7defb539d3c55d390278a4/cmd/config/docs/api-conventions/functions-spec.md
+[config-functions]: https://github.com/kubernetes-sigs/kustomize/blob/master/cmd/config/docs/api-conventions/functions-spec.md
 
 # Kubernetes Configuration Functions
 
