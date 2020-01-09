@@ -142,7 +142,7 @@ For this example you can use kubectl/grep/sed to copy the Secrets from the
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
 >
-> kubectl -n example get secret -o yaml my-consul-server-gossip |\
+> kubectl -n example get secret -o yaml my-consul-server-example-gossip |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
