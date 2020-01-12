@@ -30,9 +30,9 @@ metadata:
     app.kubernetes.io/instance: my-consul
   annotations:
     config.kubernetes.io/local-config: "true"
-  configFn:
-    container:
-      image: gcr.io/config-functions/consul:v0.0.2
+    config.kubernetes.io/function: |
+      container:
+        image: gcr.io/config-functions/consul:v0.0.2
 EOF
 ```
 
