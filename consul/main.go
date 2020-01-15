@@ -130,7 +130,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		templateRs = append(templateRs, gossipRs...)
 	}
 
-	if f.agentTLSEnabled() {
+	if f.tlsEnabled() {
 		// Generate agent TLS Resources from templates.
 		tlsRs, err := cfunc.ParseTemplates(f.tlsTemplates(), data)
 		if err != nil {
@@ -163,7 +163,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 		templateRs = append(templateRs, sidecarPatches...)
 
-		if f.agentTLSEnabled() {
+		if f.tlsEnabled() {
 			sidecarTLSCMs, err := f.getSidecarTLSCMs(sidecarPatches)
 			if err != nil {
 				return nil, err
@@ -297,9 +297,9 @@ func (f *filter) gossipEnabled() bool {
 	return false
 }
 
-func (f *filter) agentTLSEnabled() bool {
+func (f *filter) tlsEnabled() bool {
 	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "agentTLSEncryption", "enabled"),
+		yaml.Lookup("spec", "tlsEncryption", "enabled"),
 	)
 	if enabled != nil && enabled.Document().Value == "true" {
 		return true

@@ -29,7 +29,7 @@ metadata:
 spec:
   gossipEncryption:
     enabled: true
-  agentTLSEncryption:
+  tlsEncryption:
     enabled: true
   aclBootstrap:
     enabled: true
@@ -54,15 +54,15 @@ EXPECTED='.
 ├── [Resource]  Role example/my-consul-server-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-server-acl-bootstrap
 ├── [Resource]  ServiceAccount example/my-consul-server-acl-bootstrap
-├── [Resource]  Job example/my-consul-server-agent-tls
-├── [Resource]  Role example/my-consul-server-agent-tls
-├── [Resource]  RoleBinding example/my-consul-server-agent-tls
-├── [Resource]  ServiceAccount example/my-consul-server-agent-tls
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Job example/my-consul-server-gossip-encryption
 ├── [Resource]  Role example/my-consul-server-gossip-encryption
 ├── [Resource]  RoleBinding example/my-consul-server-gossip-encryption
 ├── [Resource]  ServiceAccount example/my-consul-server-gossip-encryption
+├── [Resource]  Job example/my-consul-server-tls
+├── [Resource]  Role example/my-consul-server-tls
+├── [Resource]  RoleBinding example/my-consul-server-tls
+├── [Resource]  ServiceAccount example/my-consul-server-tls
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  ConfigMap example/my-consul-server
 ├── [Resource]  Service example/my-consul-server
@@ -124,7 +124,7 @@ TEST="$(kustomize config grep "kind=Deployment" $DEMO|kustomize config tree --na
 ```
 
 **NOTE**: The sidecar will look for Secrets with the following name formats:
-- `{{ .ConsulName }}-{{ .ConsulNamespace }}-agent-tls-ca`
+- `{{ .ConsulName }}-{{ .ConsulNamespace }}-tls-ca`
 - `{{ .ConsulName }}-{{ .ConsulNamespace }}-gossip`
 
 These Secrets are automatically created in the Consul server's namespace.  You
@@ -137,7 +137,7 @@ For this example you can use kubectl/grep/sed to copy the Secrets from the
 `example` namespace to the `other-namespace` namespace.
 
 > ```sh
-> kubectl -n example get secret -o yaml my-consul-server-example-agent-tls-ca |\
+> kubectl -n example get secret -o yaml my-consul-server-example-tls-ca |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -

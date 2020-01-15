@@ -72,7 +72,7 @@ spec:
       volumes:
         - name: tls-secret
           secret:
-            secretName: {{ .Name }}-{{ .Namespace }}-agent-tls
+            secretName: {{ .Name }}-{{ .Namespace }}-tls-server
         - name: tls
           emptyDir: {}
 `
@@ -103,14 +103,14 @@ data:
 var tlsJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ .Name }}-agent-tls
+  name: {{ .Name }}-tls
 spec:
   template:
     spec:
-      serviceAccountName: {{ .Name }}-agent-tls
+      serviceAccountName: {{ .Name }}-tls
       restartPolicy: OnFailure
       initContainers:
-        - name: generate-agent-tls
+        - name: generate-tls
           image: docker.io/library/consul:1.6.2
           command:
             - /bin/sh
@@ -120,36 +120,39 @@ spec:
               cd "${tls_dir}"
               consul tls ca create
               consul tls cert create -cli
-              consul tls cert create -server
-              consul tls cert create -server
-              consul tls cert create -server
+              for i in $(seq {{ .Replicas }}); do
+                consul tls cert create -server
+              done
           volumeMounts:
             - mountPath: /tls/generated
               name: tls-generated
       containers:
-        - name: create-agent-tls-secret
+        - name: create-tls-secret
           image: k8s.gcr.io/hyperkube:v1.17.0
           command:
             - /bin/sh
             - -ec
             - |-
               tls_dir="/tls/generated"
-              prefix="{{ .Name }}-{{ .Namespace }}-agent-tls"
 
-              secret="${prefix}"
-              echo "[INFO] Creating \"secret/${secret}\"."
+              secret="$(CONSUL_TLS_SECRET_SERVER)"
               kubectl create secret generic "${secret}" "--from-file=${tls_dir}"
 
-              secret="${prefix}-ca"
-              echo "[INFO] Creating \"secret/${secret}\"."
+              secret="$(CONSUL_TLS_SECRET_CA)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/consul-agent-ca.pem"
 
-              secret="${prefix}-cli"
-              echo "[INFO] Creating \"secret/${secret}\"."
+              secret="$(CONSUL_TLS_SECRET_CLI)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
+          env:
+            - name: CONSUL_TLS_SECRET_SERVER
+              value: {{ .Name }}-{{ .Namespace }}-tls-server
+            - name: CONSUL_TLS_SECRET_CA
+              value: {{ .Name }}-{{ .Namespace }}-tls-ca
+            - name: CONSUL_TLS_SECRET_CLI
+              value: {{ .Name }}-{{ .Namespace }}-tls-cli
           volumeMounts:
             - mountPath: /tls/generated
               name: tls-generated
@@ -162,13 +165,13 @@ spec:
 var tlsSATemplate = `apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ .Name }}-agent-tls
+  name: {{ .Name }}-tls
 `
 
 var tlsRoleTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ .Name }}-agent-tls
+  name: {{ .Name }}-tls
 rules:
   - apiGroups:
       - ""
@@ -183,12 +186,12 @@ rules:
 var tlsRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ .Name }}-agent-tls
+  name: {{ .Name }}-tls
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ .Name }}-agent-tls
+  name: {{ .Name }}-tls
 subjects:
   - kind: ServiceAccount
-    name: {{ .Name }}-agent-tls
+    name: {{ .Name }}-tls
 `
