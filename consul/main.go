@@ -64,6 +64,7 @@ func main() {
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
+			&filters.MergeFilter{},
 			filter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},

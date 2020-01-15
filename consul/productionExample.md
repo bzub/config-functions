@@ -50,15 +50,18 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
+├── [Resource]  ConfigMap example/my-consul-server-acl-bootstrap-env
 ├── [Resource]  Job example/my-consul-server-acl-bootstrap
 ├── [Resource]  Role example/my-consul-server-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-server-acl-bootstrap
 ├── [Resource]  ServiceAccount example/my-consul-server-acl-bootstrap
 ├── [Resource]  Service example/my-consul-server-dns
+├── [Resource]  ConfigMap example/my-consul-server-gossip-encryption-env
 ├── [Resource]  Job example/my-consul-server-gossip-encryption
 ├── [Resource]  Role example/my-consul-server-gossip-encryption
 ├── [Resource]  RoleBinding example/my-consul-server-gossip-encryption
 ├── [Resource]  ServiceAccount example/my-consul-server-gossip-encryption
+├── [Resource]  ConfigMap example/my-consul-server-tls-env
 ├── [Resource]  Job example/my-consul-server-tls
 ├── [Resource]  Role example/my-consul-server-tls
 ├── [Resource]  RoleBinding example/my-consul-server-tls
@@ -69,6 +72,7 @@ EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

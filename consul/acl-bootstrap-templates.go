@@ -2,12 +2,21 @@ package main
 
 func (f *filter) aclJobTemplates() map[string]string {
 	return map[string]string{
+		"acl-job-cm":      aclJobEnvTemplate,
 		"acl-job":         aclJobTemplate,
 		"acl-sa":          aclSATemplate,
 		"acl-role":        aclRoleTemplate,
 		"acl-rolebinding": aclRoleBindingTemplate,
 	}
 }
+
+var aclJobEnvTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Name }}-acl-bootstrap-env
+data:
+  CONSUL_ACL_BOOTSTRAP_SECRET: {{ .Name }}-{{ .Namespace }}-acl
+`
 
 var aclJobTemplate = `apiVersion: batch/v1
 kind: Job
@@ -26,7 +35,7 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              consul_secret="{{ .Name }}-acl-bootstrap"
+              consul_secret="$(CONSUL_ACL_BOOTSTRAP_SECRET)"
               exec_arg="sts/{{ .Name }}"
 
               metadata_dir="/metadata/consul-secrets"
@@ -42,12 +51,14 @@ spec:
                 echo "${consul_bootstrap_out}"|grep AccessorID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/accessor_id.txt"
                 echo "${consul_bootstrap_out}"|grep SecretID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/secret_id.txt"
 
-                echo "[INFO] Creating \"secret/${consul_secret}\"."
                 kubectl create secret generic "--from-file=${metadata_dir}" "${consul_secret}"
               fi
 
               export CONSUL_HTTP_TOKEN="$(cat "${metadata_dir}/secret_id.txt")"
               kubectl exec "${exec_arg}" -- /bin/sh -c "CONSUL_HTTP_TOKEN=$(cat "${metadata_dir}/secret_id.txt") consul acl token list"
+          envFrom:
+            - configMapRef:
+                name: {{ .Name }}-acl-bootstrap-env
           volumeMounts:
             - mountPath: /metadata/consul-init
               name: consul-init

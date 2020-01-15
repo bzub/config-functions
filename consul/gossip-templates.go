@@ -2,6 +2,7 @@ package main
 
 func (f *filter) gossipTemplates() map[string]string {
 	return map[string]string{
+		"gossip-job-cm":      gossipJobEnvTemplate,
 		"gossip-job":         gossipJobTemplate,
 		"gossip-sa":          gossipSATemplate,
 		"gossip-role":        gossipRoleTemplate,
@@ -12,6 +13,14 @@ func (f *filter) gossipTemplates() map[string]string {
 var gossipSecretVolumeTemplate = `
 - secret:
     name: {{ .Name }}-{{ .Namespace }}-gossip
+`
+
+var gossipJobEnvTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Name }}-gossip-encryption-env
+data:
+  CONSUL_GOSSIP_SECRET: {{ .Name }}-{{ .Namespace }}-gossip
 `
 
 var gossipJobTemplate = `apiVersion: batch/v1
@@ -47,16 +56,12 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              secret="{{ .Name }}-{{ .Namespace }}-gossip"
+              secret="$(CONSUL_GOSSIP_SECRET)"
               config_dir="/config/generated"
-
-              if [ ! "$(kubectl get secret --no-headers "${secret}"|wc -l)" = "0" ]; then
-                echo "[INFO] \"secret/${secret}\" already exists. Exiting."
-                exit 0
-              fi
-
-              echo "[INFO] Creating \"secret/${secret}\"."
               kubectl create secret generic "--from-file=${config_dir}" "${secret}"
+          envFrom:
+            - configMapRef:
+                name: {{ .Name }}-gossip-encryption-env
           volumeMounts:
             - mountPath: /config/generated
               name: config-generated

@@ -2,6 +2,7 @@ package main
 
 func (f *filter) tlsTemplates() map[string]string {
 	return map[string]string{
+		"tls-job-cm":      tlsJobEnvTemplate,
 		"tls-job":         tlsJobTemplate,
 		"tls-sa":          tlsSATemplate,
 		"tls-role":        tlsRoleTemplate,
@@ -100,6 +101,16 @@ data:
     }
 `
 
+var tlsJobEnvTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Name }}-tls-env
+data:
+  CONSUL_TLS_SECRET_SERVER: {{ .Name }}-{{ .Namespace }}-tls-server
+  CONSUL_TLS_SECRET_CA: {{ .Name }}-{{ .Namespace }}-tls-ca
+  CONSUL_TLS_SECRET_CLI: {{ .Name }}-{{ .Namespace }}-tls-cli
+`
+
 var tlsJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
@@ -146,13 +157,9 @@ spec:
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
-          env:
-            - name: CONSUL_TLS_SECRET_SERVER
-              value: {{ .Name }}-{{ .Namespace }}-tls-server
-            - name: CONSUL_TLS_SECRET_CA
-              value: {{ .Name }}-{{ .Namespace }}-tls-ca
-            - name: CONSUL_TLS_SECRET_CLI
-              value: {{ .Name }}-{{ .Namespace }}-tls-cli
+          envFrom:
+            - configMapRef:
+                name: {{ .Name }}-tls-env
           volumeMounts:
             - mountPath: /tls/generated
               name: tls-generated
