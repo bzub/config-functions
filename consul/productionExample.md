@@ -13,7 +13,7 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/99-local-config.yaml
+cat <<EOF >$DEMO/function-config.yaml
 apiVersion: config.kubernetes.io/v1beta1
 kind: ConsulConfigFunction
 metadata:
@@ -68,7 +68,7 @@ EXPECTED='.
 ├── [Resource]  Service example/my-consul-server
 └── [Resource]  StatefulSet example/my-consul-server'
 
-TEST="$(kustomize config tree --graph-structure owners $DEMO)"
+TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

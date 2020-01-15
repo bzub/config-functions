@@ -20,7 +20,7 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/99-local-config.yaml
+cat <<EOF >$DEMO/function-config.yaml
 apiVersion: config.kubernetes.io/v1beta1
 kind: ConsulConfigFunction
 metadata:
@@ -59,6 +59,37 @@ TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
 ```
 
 ## Configuration
+
+### Metadata
+
+The fields under `metadata` in the function config are propagated to the
+Resource configs the function manages/generates. The function also takes care
+of updating other Resource attributes like PodTemplate/Service label selectors.
+
+```sh
+EXPECTED='.
+└── [Resource]  StatefulSet example/my-consul-server
+    ├── metadata.labels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
+    └── spec.selector: {matchLabels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}}'
+
+TEST="$(
+kustomize config grep "kind=StatefulSet" $DEMO |\
+kustomize config tree --field="metadata.labels" --field="spec.selector" --graph-structure=owners)"
+[ "$TEST" = "$EXPECTED" ]
+
+EXPECTED='.
+├── [Resource]  Service example/my-consul-server-dns
+│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
+├── [Resource]  Service example/my-consul-server-ui
+│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
+└── [Resource]  Service example/my-consul-server
+    └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}'
+
+TEST="$(
+kustomize config grep "kind=Service" $DEMO |\
+kustomize config tree --field="spec.selector" --graph-structure=owners)"
+[ "$TEST" = "$EXPECTED" ]
+```
 
 ### Replicas
 

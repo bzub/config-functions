@@ -66,6 +66,7 @@ func main() {
 		Filters: []kio.Filter{
 			filter,
 			&filters.MergeFilter{},
+			&filters.FormatFilter{},
 			&filters.FileSetter{},
 		},
 		Outputs: []kio.Writer{rw},
