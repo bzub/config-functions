@@ -288,43 +288,26 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 }
 
 func (f *filter) gossipEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "gossipEncryption", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
-	}
-
-	return false
+	return f.specHas("gossipEncryptionJob", "true")
 }
 
 func (f *filter) tlsEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "tlsEncryption", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
-	}
-
-	return false
+	return f.specHas("tlsEncryptionJob", "true")
 }
 
 func (f *filter) aclBootstrapEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "aclBootstrap", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
-	}
-
-	return false
+	return f.specHas("aclBootstrapJob", "true")
 }
 
 func (f *filter) agentSidecarInjectorEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "agentSidecarInjector", "enabled"),
+	return f.specHas("agentSidecarInjector", "true")
+}
+
+func (f *filter) specHas(field, value string) bool {
+	key, _ := f.RW.FunctionConfig.Pipe(
+		yaml.Lookup("spec", field),
 	)
-	if enabled != nil && enabled.Document().Value == "true" {
+	if key != nil && key.Document().Value == value {
 		return true
 	}
 

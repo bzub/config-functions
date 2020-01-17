@@ -32,7 +32,7 @@ metadata:
     config.kubernetes.io/local-config: "true"
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.2
+        image: gcr.io/config-functions/consul:v0.0.3
 EOF
 ```
 
