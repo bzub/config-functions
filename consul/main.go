@@ -29,6 +29,14 @@ type templateData struct {
 	// Replicas is the number of configured Consul server replicas. Used
 	// for other options like --bootstrap-expect.
 	Replicas int
+
+	// ACLBootstrapSecretName is the name of the Secret used to hold Consul
+	// cluster ACL bootstrap information.
+	ACLBootstrapSecretName string
+
+	// GossipSecretName is the name of the Secret used to hold the Consul
+	// gossip encryption key/config.
+	GossipSecretName string
 }
 
 // sidecarTemplateData holds information used in agent sidecar patches.
@@ -91,14 +99,8 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		return nil, err
 	}
 
-	// Find the Consul StatefulSet.
-	sts, err := getConsulStatefulSet(managedRs)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get data for templates.
-	data, err := f.templateData(sts)
+	data, err := f.templateData(managedRs)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +195,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 // templateData populates a struct with information needed for Resource
 // templates.
-func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
+func (f *filter) templateData(resources []*yaml.RNode) (*templateData, error) {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
@@ -201,26 +203,65 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 
 	// Defaults
 	data := &templateData{
-		ObjectMeta: &fnMeta.ObjectMeta,
-		Replicas:   1,
+		ObjectMeta:             &fnMeta.ObjectMeta,
+		Replicas:               1,
+		ACLBootstrapSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
+		GossipSecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
 	}
 
-	if sts == nil {
-		// Use defaults if no StatefulSet is provided (needs to be
-		// generated).
-		return data, nil
-	}
-
-	// Find the number of replicas for the workload being managed. Defaults
-	// to 1 if replicas is omitted in the input Resource config.
-	value, err := sts.Pipe(yaml.Lookup("spec", "replicas"))
+	sts, err := getConsulStatefulSet(resources)
 	if err != nil {
 		return nil, err
 	}
-	if value != nil {
-		data.Replicas, err = strconv.Atoi(value.YNode().Value)
+	if sts != nil {
+		// Find the number of replicas for the workload being managed.
+		// Defaults to 1 if replicas is omitted in the input Resource
+		// config.
+		val, err := sts.Pipe(yaml.Lookup("spec", "replicas"))
 		if err != nil {
 			return nil, err
+		}
+		if val != nil {
+			data.Replicas, err = strconv.Atoi(val.YNode().Value)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	aclEnv, err := f.getACLJobEnv(resources)
+	if err != nil {
+		return nil, err
+	}
+	if aclEnv != nil {
+		val, err := aclEnv.Pipe(
+			yaml.Lookup("data", "CONSUL_ACL_BOOTSTRAP_SECRET"),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if val != nil {
+			// If a Secret name is already defined in input use
+			// that.
+			data.ACLBootstrapSecretName = val.YNode().Value
+		}
+	}
+
+	gossipEnv, err := f.getGossipJobEnv(resources)
+	if err != nil {
+		return nil, err
+	}
+	if gossipEnv != nil {
+		val, err := gossipEnv.Pipe(
+			yaml.Lookup("data", "CONSUL_GOSSIP_SECRET"),
+		)
+		if err != nil {
+			return nil, err
+		}
+		if val != nil {
+			// If a Secret name is already defined in input use
+			// that.
+			data.GossipSecretName = val.YNode().Value
 		}
 	}
 
@@ -235,7 +276,7 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 // removed once that's fixed.
 func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 	// Get data for templates.
-	data, err := f.templateData(sts)
+	data, err := f.templateData([]*yaml.RNode{sts})
 	if err != nil {
 		return err
 	}
@@ -280,11 +321,66 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 			break
 		}
 	}
-	if sts == nil {
-		return nil, nil
-	}
 
 	return sts, nil
+}
+
+func (f *filter) getACLJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
+	}
+
+	var cm *yaml.RNode
+	for _, r := range in {
+		rMeta, err := r.GetMeta()
+		if err != nil {
+			return nil, err
+		}
+
+		switch {
+		case rMeta.Kind != "ConfigMap":
+			fallthrough
+		case rMeta.Name != fnMeta.Name+"-acl-bootstrap-env":
+			fallthrough
+		case rMeta.Namespace != fnMeta.Namespace:
+			continue
+		}
+
+		cm = r
+		break
+	}
+
+	return cm, nil
+}
+
+func (f *filter) getGossipJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
+	}
+
+	var cm *yaml.RNode
+	for _, r := range in {
+		rMeta, err := r.GetMeta()
+		if err != nil {
+			return nil, err
+		}
+
+		switch {
+		case rMeta.Kind != "ConfigMap":
+			fallthrough
+		case rMeta.Name != fnMeta.Name+"-gossip-encryption-env":
+			fallthrough
+		case rMeta.Namespace != fnMeta.Namespace:
+			continue
+		}
+
+		cm = r
+		break
+	}
+
+	return cm, nil
 }
 
 func (f *filter) gossipEnabled() bool {

@@ -12,7 +12,7 @@ func (f *filter) gossipTemplates() map[string]string {
 
 var gossipSecretVolumeTemplate = `
 - secret:
-    name: {{ .Name }}-{{ .Namespace }}-gossip
+    name: {{ .GossipSecretName }}
 `
 
 var gossipJobEnvTemplate = `apiVersion: v1
@@ -20,8 +20,10 @@ kind: ConfigMap
 metadata:
   name: {{ .Name }}-gossip-encryption-env
 data:
-  CONSUL_GOSSIP_SECRET: {{ .Name }}-{{ .Namespace }}-gossip
+  CONSUL_GOSSIP_SECRET: {{ .GossipSecretName }}
 `
+
+// CONSUL_GOSSIP_SECRET: {{ .Name }}-{{ .Namespace }}-gossip
 
 var gossipJobTemplate = `apiVersion: batch/v1
 kind: Job
@@ -86,8 +88,6 @@ rules:
     resources:
       - secrets
     verbs:
-      - get
-      - list
       - create
 `
 

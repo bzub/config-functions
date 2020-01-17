@@ -15,7 +15,7 @@ kind: ConfigMap
 metadata:
   name: {{ .Name }}-acl-bootstrap-env
 data:
-  CONSUL_ACL_BOOTSTRAP_SECRET: {{ .Name }}-{{ .Namespace }}-acl
+  CONSUL_ACL_BOOTSTRAP_SECRET: {{ .ACLBootstrapSecretName }}
 `
 
 var aclJobTemplate = `apiVersion: batch/v1
@@ -37,10 +37,10 @@ spec:
             - |-
               secret_dir="/consul/acl-bootstrap"
               secret_name="$(CONSUL_ACL_BOOTSTRAP_SECRET)"
-              exec_arg="sts/{{ .Name }}"
+              exec_pod="{{ .Name }}-0"
 
               echo "[INFO] Performing consul acl bootstrap."
-              output="$(kubectl exec "${exec_arg}" -- consul acl bootstrap)"
+              output="$(kubectl exec "${exec_pod}" -- consul acl bootstrap)"
 
               if [ "${output}" = "" ]; then
                 echo "[ERROR] No consul acl bootstrap output. Is consul up and running?"
@@ -81,28 +81,23 @@ rules:
     resources:
       - secrets
     verbs:
-      - get
-      - list
       - create
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - get
-      - list
   - apiGroups:
       - ""
     resources:
       - pods/exec
     verbs:
       - create
+    resourceNames:
+      - {{ .Name }}-0
   - apiGroups:
-      - apps
+      - ""
     resources:
-      - statefulsets
+      - pods
     verbs:
       - get
+    resourceNames:
+      - {{ .Name }}-0
 `
 
 var aclRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1
