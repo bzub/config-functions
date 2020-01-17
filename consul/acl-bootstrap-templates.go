@@ -35,42 +35,34 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              consul_secret="$(CONSUL_ACL_BOOTSTRAP_SECRET)"
+              secret_dir="/consul/acl-bootstrap"
+              secret_name="$(CONSUL_ACL_BOOTSTRAP_SECRET)"
               exec_arg="sts/{{ .Name }}"
 
-              metadata_dir="/metadata/consul-secrets"
-              if [ "$(ls "${metadata_dir}"|wc -l)" = "0" ]; then
-                metadata_dir="/metadata/consul-init"
+              echo "[INFO] Performing consul acl bootstrap."
+              output="$(kubectl exec "${exec_arg}" -- consul acl bootstrap)"
 
-                echo "[INFO] Performing consul acl bootstrap."
-                export consul_bootstrap_out="$(kubectl exec "${exec_arg}" -- consul acl bootstrap)"
-                if [ "${consul_bootstrap_out}" = "" ]; then
-                  echo "[ERROR] No consul acl bootstrap output. Is consul up and running?"
-                  exit 1
-                fi
-                echo "${consul_bootstrap_out}"|grep AccessorID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/accessor_id.txt"
-                echo "${consul_bootstrap_out}"|grep SecretID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/secret_id.txt"
-
-                kubectl create secret generic "--from-file=${metadata_dir}" "${consul_secret}"
+              if [ "${output}" = "" ]; then
+                echo "[ERROR] No consul acl bootstrap output. Is consul up and running?"
+                exit 1
               fi
 
-              export CONSUL_HTTP_TOKEN="$(cat "${metadata_dir}/secret_id.txt")"
-              kubectl exec "${exec_arg}" -- /bin/sh -c "CONSUL_HTTP_TOKEN=$(cat "${metadata_dir}/secret_id.txt") consul acl token list"
+              echo "${output}"|grep AccessorID|awk '{print $2}'|tr -d '\n' >\
+                "${secret_dir}/accessor_id.txt"
+              echo "${output}"|grep SecretID|awk '{print $2}'|tr -d '\n' >\
+                "${secret_dir}/secret_id.txt"
+
+              kubectl create secret generic \
+                "--from-file=${secret_dir}" "${secret_name}"
           envFrom:
             - configMapRef:
                 name: {{ .Name }}-acl-bootstrap-env
           volumeMounts:
-            - mountPath: /metadata/consul-init
+            - mountPath: /consul/acl-bootstrap
               name: consul-init
-            - mountPath: /metadata/consul-secrets
-              name: consul-secrets
       volumes:
         - name: consul-init
           emptyDir: {}
-        - name: consul-secrets
-          secret:
-            secretName: {{ .Name }}-acl-bootstrap
-            optional: true
 `
 
 var aclSATemplate = `apiVersion: v1
