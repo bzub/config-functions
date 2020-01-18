@@ -260,64 +260,6 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 	return sts, nil
 }
 
-func (f *filter) getACLJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-
-	var cm *yaml.RNode
-	for _, r := range in {
-		rMeta, err := r.GetMeta()
-		if err != nil {
-			return nil, err
-		}
-
-		switch {
-		case rMeta.Kind != "ConfigMap":
-			fallthrough
-		case rMeta.Name != fnMeta.Name+"-acl-bootstrap-env":
-			fallthrough
-		case rMeta.Namespace != fnMeta.Namespace:
-			continue
-		}
-
-		cm = r
-		break
-	}
-
-	return cm, nil
-}
-
-func (f *filter) getGossipJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-
-	var cm *yaml.RNode
-	for _, r := range in {
-		rMeta, err := r.GetMeta()
-		if err != nil {
-			return nil, err
-		}
-
-		switch {
-		case rMeta.Kind != "ConfigMap":
-			fallthrough
-		case rMeta.Name != fnMeta.Name+"-gossip-encryption-env":
-			fallthrough
-		case rMeta.Namespace != fnMeta.Namespace:
-			continue
-		}
-
-		cm = r
-		break
-	}
-
-	return cm, nil
-}
-
 // getSidecarPatches returns patches with a sidecar added.
 func (f *filter) getSidecarPatches(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Get resources that are calling for sidecar injection.
