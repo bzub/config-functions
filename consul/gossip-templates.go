@@ -2,7 +2,6 @@ package main
 
 func (f *filter) gossipTemplates() map[string]string {
 	return map[string]string{
-		"gossip-job-cm":      gossipJobEnvTemplate,
 		"gossip-job":         gossipJobTemplate,
 		"gossip-sa":          gossipSATemplate,
 		"gossip-role":        gossipRoleTemplate,
@@ -12,23 +11,17 @@ func (f *filter) gossipTemplates() map[string]string {
 
 var gossipSecretVolumeTemplate = `
 - secret:
-    name: {{ .GossipSecretName }}
+    name: {{ .Data.GossipSecretName }}
 `
-
-var gossipJobEnvTemplate = `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Name }}-gossip-encryption-env
-data:
-  CONSUL_GOSSIP_SECRET: {{ .GossipSecretName }}
-`
-
-// CONSUL_GOSSIP_SECRET: {{ .Name }}-{{ .Namespace }}-gossip
 
 var gossipJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Name }}-gossip-encryption
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
   template:
     spec:
@@ -58,12 +51,12 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              secret="$(CONSUL_GOSSIP_SECRET)"
+              secret="$(gossip_secret_name)"
               config_dir="/config/generated"
               kubectl create secret generic "--from-file=${config_dir}" "${secret}"
           envFrom:
             - configMapRef:
-                name: {{ .Name }}-gossip-encryption-env
+                name: {{ .Name }}
           volumeMounts:
             - mountPath: /config/generated
               name: config-generated
@@ -76,12 +69,20 @@ var gossipSATemplate = `apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ .Name }}-gossip-encryption
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 `
 
 var gossipRoleTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ .Name }}-gossip-encryption
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 rules:
   - apiGroups:
       - ""
@@ -95,6 +96,10 @@ var gossipRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ .Name }}-gossip-encryption
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

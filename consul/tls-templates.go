@@ -2,7 +2,6 @@ package main
 
 func (f *filter) tlsTemplates() map[string]string {
 	return map[string]string{
-		"tls-job-cm":      tlsJobEnvTemplate,
 		"tls-job":         tlsJobTemplate,
 		"tls-sa":          tlsSATemplate,
 		"tls-role":        tlsRoleTemplate,
@@ -16,7 +15,8 @@ func (f *filter) tlsTemplates() map[string]string {
 var tlsSTSPatchTemplate = `apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Name }}
+  name: {{ .Name }}-server
+  namespace: "{{ .Namespace }}"
 spec:
   template:
     spec:
@@ -81,7 +81,8 @@ spec:
 var tlsCMPatchTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}
+  name: {{ .Name }}-server
+  namespace: "{{ .Namespace }}"
 data:
   00-default-agent-tls.json: |-
     {
@@ -101,20 +102,14 @@ data:
     }
 `
 
-var tlsJobEnvTemplate = `apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ .Name }}-tls-env
-data:
-  CONSUL_TLS_SECRET_SERVER: {{ .Name }}-{{ .Namespace }}-tls-server
-  CONSUL_TLS_SECRET_CA: {{ .Name }}-{{ .Namespace }}-tls-ca
-  CONSUL_TLS_SECRET_CLI: {{ .Name }}-{{ .Namespace }}-tls-cli
-`
-
 var tlsJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Name }}-tls
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
   template:
     spec:
@@ -131,7 +126,7 @@ spec:
               cd "${tls_dir}"
               consul tls ca create
               consul tls cert create -cli
-              for i in $(seq {{ .Replicas }}); do
+              for i in $(seq {{ .Data.Replicas }}); do
                 consul tls cert create -server
               done
           volumeMounts:
@@ -146,20 +141,20 @@ spec:
             - |-
               tls_dir="/tls/generated"
 
-              secret="$(CONSUL_TLS_SECRET_SERVER)"
+              secret="$(agent_tls_server_secret_name)"
               kubectl create secret generic "${secret}" "--from-file=${tls_dir}"
 
-              secret="$(CONSUL_TLS_SECRET_CA)"
+              secret="$(agent_tls_ca_secret_name)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/consul-agent-ca.pem"
 
-              secret="$(CONSUL_TLS_SECRET_CLI)"
+              secret="$(agent_tls_cli_secret_name)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
           envFrom:
             - configMapRef:
-                name: {{ .Name }}-tls-env
+                name: {{ .Name }}
           volumeMounts:
             - mountPath: /tls/generated
               name: tls-generated
@@ -173,12 +168,20 @@ var tlsSATemplate = `apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ .Name }}-tls
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 `
 
 var tlsRoleTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ .Name }}-tls
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 rules:
   - apiGroups:
       - ""
@@ -194,6 +197,10 @@ var tlsRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ .Name }}-tls
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

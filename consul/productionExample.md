@@ -14,23 +14,21 @@ Set up a workspace and define a function configuration.
 DEMO=$(mktemp -d)
 
 cat <<EOF >$DEMO/function-config.yaml
-apiVersion: config.kubernetes.io/v1beta1
-kind: ConsulConfigFunction
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: my-consul-server
+  name: my-consul
   namespace: example
-  labels:
-    app.kubernetes.io/instance: my-consul
   annotations:
-    config.kubernetes.io/local-config: "true"
     config.kubernetes.io/function: |
       container:
         image: gcr.io/config-functions/consul:v0.0.3
-spec:
-  gossipEncryptionJob: true
-  tlsEncryptionJob: true
-  aclBootstrapJob: true
-  agentSidecarInjector: true
+data:
+  replicas: "3"
+  agent_tls_enabled: "true"
+  gossip_enabled: "true"
+  acl_bootstrap_enabled: "true"
+  agent_sidecar_injector_enabled: "true"
 EOF
 ```
 
@@ -46,29 +44,26 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  ConfigMap example/my-consul-server-acl-bootstrap-env
-├── [Resource]  Job example/my-consul-server-acl-bootstrap
-├── [Resource]  Role example/my-consul-server-acl-bootstrap
-├── [Resource]  RoleBinding example/my-consul-server-acl-bootstrap
-├── [Resource]  ServiceAccount example/my-consul-server-acl-bootstrap
+├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  Job example/my-consul-acl-bootstrap
+├── [Resource]  Role example/my-consul-acl-bootstrap
+├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
+├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  Job example/my-consul-gossip-encryption
+├── [Resource]  Role example/my-consul-gossip-encryption
+├── [Resource]  RoleBinding example/my-consul-gossip-encryption
+├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
 ├── [Resource]  Service example/my-consul-server-dns
-├── [Resource]  ConfigMap example/my-consul-server-gossip-encryption-env
-├── [Resource]  Job example/my-consul-server-gossip-encryption
-├── [Resource]  Role example/my-consul-server-gossip-encryption
-├── [Resource]  RoleBinding example/my-consul-server-gossip-encryption
-├── [Resource]  ServiceAccount example/my-consul-server-gossip-encryption
-├── [Resource]  ConfigMap example/my-consul-server-tls-env
-├── [Resource]  Job example/my-consul-server-tls
-├── [Resource]  Role example/my-consul-server-tls
-├── [Resource]  RoleBinding example/my-consul-server-tls
-├── [Resource]  ServiceAccount example/my-consul-server-tls
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  ConfigMap example/my-consul-server
 ├── [Resource]  Service example/my-consul-server
-└── [Resource]  StatefulSet example/my-consul-server'
+├── [Resource]  StatefulSet example/my-consul-server
+├── [Resource]  Job example/my-consul-tls
+├── [Resource]  Role example/my-consul-tls
+├── [Resource]  RoleBinding example/my-consul-tls
+└── [Resource]  ServiceAccount example/my-consul-tls'
 
 TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
-echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -89,7 +84,7 @@ metadata:
   annotations:
     config.bzub.dev/consul-agent-sidecar-injector: |-
       metadata:
-        name: my-consul-server
+        name: my-consul
         namespace: example
 spec:
   selector:
@@ -137,12 +132,12 @@ For this example you can use kubectl/grep/sed to copy the Secrets from the
 `example` namespace to the `other-namespace` namespace.
 
 > ```sh
-> kubectl -n example get secret -o yaml my-consul-server-example-tls-ca |\
+> kubectl -n example get secret -o yaml my-consul-example-tls-ca |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
 >
-> kubectl -n example get secret -o yaml my-consul-server-example-gossip |\
+> kubectl -n example get secret -o yaml my-consul-example-gossip |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
