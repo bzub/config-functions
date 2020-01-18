@@ -208,11 +208,7 @@ func (f *filter) functionConfig() (*functionConfig, error) {
 }
 
 // injectGossipSecretVolume adds the gossip encryption Consul config secret as
-// a projected volume source to the Consul agent Resource config.
-//
-// TODO: Strategic merge patch seems to replace rather than merge projected
-// volume sources. This should be in the patch variable and this function
-// removed once that's fixed.
+// a projected volume source to the volume called "consul-configs".
 func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 	// Get data for templates.
 	data, err := f.functionConfig()
@@ -240,7 +236,7 @@ func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 		yaml.Append(vol.YNode().Content...),
 	)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil
