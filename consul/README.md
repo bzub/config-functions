@@ -21,18 +21,15 @@ Set up a workspace and define a function configuration.
 DEMO=$(mktemp -d)
 
 cat <<EOF >$DEMO/function-config.yaml
-apiVersion: config.kubernetes.io/v1beta1
-kind: ConsulConfigFunction
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: my-consul-server
+  name: my-consul
   namespace: example
-  labels:
-    app.kubernetes.io/instance: my-consul
   annotations:
-    config.kubernetes.io/local-config: "true"
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.2
+        image: gcr.io/config-functions/consul:v0.0.3
 EOF
 ```
 
@@ -48,6 +45,7 @@ The function generates the following resources.
 <!-- @verifyResources @test -->
 ```sh
 EXPECTED='.
+├── [Resource]  ConfigMap example/my-consul
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  ConfigMap example/my-consul-server
@@ -60,12 +58,53 @@ TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
 
 ## Configuration
 
+### Default Configuration Data
+
+The function adds any missing configuration fields to the function ConfigMap we
+created above, populating their values with defaults.
+
+<!-- @verifyFunctionConfigDefaults @test -->
+```sh
+EXPECTED='apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-consul
+  namespace: example
+  labels:
+    app.kubernetes.io/instance: my-consul
+    app.kubernetes.io/name: consul-server
+  annotations:
+    config.kubernetes.io/function: |
+      container:
+        image: gcr.io/config-functions/consul:v0.0.3
+data:
+  replicas: "1"
+  acl_bootstrap_enabled: "false"
+  acl_bootstrap_secret_name: "my-consul-example-acl"
+  agent_sidecar_injector_enabled: "false"
+  agent_tls_ca_secret_name: "my-consul-example-tls-ca"
+  agent_tls_cli_secret_name: "my-consul-example-tls-cli"
+  agent_tls_enabled: "false"
+  agent_tls_server_secret_name: "my-consul-example-tls-server"
+  gossip_enabled: "false"
+  gossip_secret_name: "my-consul-example-gossip"'
+
+TEST="$(cat $DEMO/function-config.yaml)"
+[ "$TEST" = "$EXPECTED" ]
+```
+
 ### Metadata
 
-The fields under `metadata` in the function config are propagated to the
-Resource configs the function manages/generates. The function also takes care
-of updating other Resource attributes like PodTemplate/Service label selectors.
+The following information from the function config are applied to all Resource configs the function
+manages/generates:
+- `metadata.name` - Used as a prefix for Resource names.
+- `metadata.namespace`
 
+In addition, the function sets the following labels on Resource configs:
+- `app.kubernetes.io/name` - Defaults to `consul-server`
+- `app.kubernetes.io/instance` - Defaults to the function config's `metadata.name`
+
+<!-- @verifyStatefulSetMetadata @test -->
 ```sh
 EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server
@@ -76,7 +115,10 @@ TEST="$(
 kustomize config grep "kind=StatefulSet" $DEMO |\
 kustomize config tree --field="metadata.labels" --field="spec.selector" --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
+```
 
+<!-- @verifyServiceMetadata @test -->
+```sh
 EXPECTED='.
 ├── [Resource]  Service example/my-consul-server-dns
 │   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
@@ -93,13 +135,13 @@ kustomize config tree --field="spec.selector" --graph-structure=owners)"
 
 ### Replicas
 
-The function does not set `.spec.replicas` on the Consul StatefulSet. If
-replicas is undefined, the function assumes one replica and sets other options
-accordingly.
+If `data.replicas` is undefined in the function config, the function assumes
+one replica and sets other options accordingly.
 <!-- @verifyConsulReplicas1 @test -->
 ```sh
 EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server
+    ├── spec.replicas: 1
     └── spec.template.spec.containers
         └── 0
             └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "1"}'
@@ -110,12 +152,12 @@ TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
 [ "$TEST" = "$EXPECTED" ]
 ```
 
-If you change the number of replicas in the generated Resource config, re-run
-the function to ensure other parts of the config get updated as well.
+Set `data.replicas` in the function config and re-run the function to update
+the number of StatefulSet replicas and to ensure other parts of the config get
+updated as well.
 <!-- @verifyConsulReplicas3 @test -->
 ```sh
-# Add a replicas field to the StatefulSet spec.
-sed -i '/^spec:$/a \  replicas: 3' $DEMO/my-consul-server_statefulset.yaml
+echo '  replicas: "3"' >>$DEMO/function-config.yaml
 kustomize config run $DEMO
 
 EXPECTED='.

@@ -13,6 +13,10 @@ var aclJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Name }}-acl-bootstrap
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
   template:
     metadata:
@@ -26,86 +30,87 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              consul_secret="{{ .Name }}-acl-bootstrap"
-              exec_arg="sts/{{ .Name }}"
+              secret_dir="/consul/acl-bootstrap"
+              secret_name="$(acl_bootstrap_secret_name)"
+              exec_pod="{{ .Name }}-server-0"
 
-              metadata_dir="/metadata/consul-secrets"
-              if [ "$(ls "${metadata_dir}"|wc -l)" = "0" ]; then
-                metadata_dir="/metadata/consul-init"
+              echo "[INFO] Performing consul acl bootstrap."
+              output="$(kubectl exec "${exec_pod}" -- consul acl bootstrap)"
 
-                echo "[INFO] Performing consul acl bootstrap."
-                export consul_bootstrap_out="$(kubectl exec "${exec_arg}" -- consul acl bootstrap)"
-                if [ "${consul_bootstrap_out}" = "" ]; then
-                  echo "[ERROR] No consul acl bootstrap output. Is consul up and running?"
-                  exit 1
-                fi
-                echo "${consul_bootstrap_out}"|grep AccessorID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/accessor_id.txt"
-                echo "${consul_bootstrap_out}"|grep SecretID|awk '{print $2}'|tr -d '\n' > "${metadata_dir}/secret_id.txt"
-
-                echo "[INFO] Creating \"secret/${consul_secret}\"."
-                kubectl create secret generic "--from-file=${metadata_dir}" "${consul_secret}"
+              if [ "${output}" = "" ]; then
+                echo "[ERROR] No consul acl bootstrap output. Is consul up and running?"
+                exit 1
               fi
 
-              export CONSUL_HTTP_TOKEN="$(cat "${metadata_dir}/secret_id.txt")"
-              kubectl exec "${exec_arg}" -- /bin/sh -c "CONSUL_HTTP_TOKEN=$(cat "${metadata_dir}/secret_id.txt") consul acl token list"
+              echo "${output}"|grep AccessorID|awk '{print $2}'|tr -d '\n' >\
+                "${secret_dir}/accessor_id.txt"
+              echo "${output}"|grep SecretID|awk '{print $2}'|tr -d '\n' >\
+                "${secret_dir}/secret_id.txt"
+
+              kubectl create secret generic \
+                "--from-file=${secret_dir}" "${secret_name}"
+          envFrom:
+            - configMapRef:
+                name: {{ .Name }}
           volumeMounts:
-            - mountPath: /metadata/consul-init
+            - mountPath: /consul/acl-bootstrap
               name: consul-init
-            - mountPath: /metadata/consul-secrets
-              name: consul-secrets
       volumes:
         - name: consul-init
           emptyDir: {}
-        - name: consul-secrets
-          secret:
-            secretName: {{ .Name }}-acl-bootstrap
-            optional: true
 `
 
 var aclSATemplate = `apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ .Name }}-acl-bootstrap
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 `
 
 var aclRoleTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ .Name }}-acl-bootstrap
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 rules:
   - apiGroups:
       - ""
     resources:
       - secrets
     verbs:
-      - get
-      - list
       - create
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - get
-      - list
   - apiGroups:
       - ""
     resources:
       - pods/exec
     verbs:
       - create
+    resourceNames:
+      - {{ .Name }}-server-0
   - apiGroups:
-      - apps
+      - ""
     resources:
-      - statefulsets
+      - pods
     verbs:
       - get
+    resourceNames:
+      - {{ .Name }}-server-0
 `
 
 var aclRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ .Name }}-acl-bootstrap
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

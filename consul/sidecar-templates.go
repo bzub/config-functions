@@ -43,7 +43,7 @@ spec:
                   optional: true
         - name: consul-tls-secret
           secret:
-            secretName: {{ .ConsulName }}-{{ .ConsulNamespace }}-agent-tls-ca
+            secretName: {{ .ConsulName }}-{{ .ConsulNamespace }}-tls-ca
             optional: true
 `
 

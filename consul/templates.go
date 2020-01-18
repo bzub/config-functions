@@ -13,7 +13,11 @@ func (f *filter) defaultTemplates() map[string]string {
 var cmTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}
+  name: {{ .Name }}-server
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
   00-defaults.hcl: |-
     acl = {
@@ -30,13 +34,26 @@ data:
 var stsTemplate = `apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ .Name }}
+  name: {{ .Name }}-server
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
-  serviceName: {{ .Name }}
+  replicas: {{ .Data.Replicas }}
+  serviceName: {{ .Name }}-server
   podManagementPolicy: Parallel
   updateStrategy:
     type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+      app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
   template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+        app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
     spec:
       terminationGracePeriodSeconds: 10
       securityContext:
@@ -54,7 +71,7 @@ spec:
             - -config-dir=/consul/config
             - -data-dir=/consul/data
             - -ui
-            - -retry-join={{ .Name }}.$(NAMESPACE).svc.cluster.local
+            - -retry-join={{ .Name }}-server.$(NAMESPACE).svc.cluster.local
             - -server
           env:
             - name: POD_IP
@@ -66,7 +83,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: CONSUL_REPLICAS
-              value: "{{ .Replicas }}"
+              value: "{{ .Data.Replicas }}"
           volumeMounts:
             - name: consul-data
               mountPath: /consul/data
@@ -124,14 +141,21 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: {{ .Name }}
+                  name: {{ .Name }}-server
 `
 
 var svcTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Name }}
+  name: {{ .Name }}-server
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
+  selector:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
   clusterIP: None
   publishNotReadyAddresses: true
   ports:
@@ -170,8 +194,15 @@ spec:
 var dnsSvcTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Name }}-dns
+  name: {{ .Name }}-server-dns
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
+  selector:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
   ports:
     - name: dns-tcp
       port: 53
@@ -186,8 +217,15 @@ spec:
 var uiSvcTemplate = `apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Name }}-ui
+  name: {{ .Name }}-server-ui
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
+  selector:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
   ports:
     - name: http
       port: 80

@@ -4,31 +4,18 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"strconv"
 	"text/template"
 
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
-
-	"github.com/bzub/config-functions/cfunc"
 )
 
 const casiAnnotation = "config.bzub.dev/consul-agent-sidecar-injector"
 
 // filter implements kio.Filter
 type filter struct {
-	*cfunc.CFunc
-}
-
-// templateData holds information used in Resource templates.
-type templateData struct {
-	// ObjectMeta contains Resource metadata to use in templates.
-	*yaml.ObjectMeta
-
-	// Replicas is the number of configured Consul server replicas. Used
-	// for other options like --bootstrap-expect.
-	Replicas int
+	rw *kio.ByteReadWriter
 }
 
 // sidecarTemplateData holds information used in agent sidecar patches.
@@ -57,14 +44,10 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
-	filter := &filter{}
-	filter.CFunc = &cfunc.CFunc{}
-	filter.RW = rw
-
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			filter,
+			&filter{rw},
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 			&filters.FileSetter{},
@@ -79,31 +62,26 @@ func main() {
 
 // Filter generates Resources.
 func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
-	// Verify and name function config metadata.
-	if err := f.VerifyMeta("consul-server"); err != nil {
-		return nil, err
-	}
-
-	// Get resources we care about from input.
-	managedRs, err := f.ManagedResources(in)
-	if err != nil {
-		return nil, err
-	}
-
-	// Find the Consul StatefulSet.
-	sts, err := getConsulStatefulSet(managedRs)
-	if err != nil {
+	// Workaround single line style of function config.
+	if err := fixStyles(in...); err != nil {
 		return nil, err
 	}
 
 	// Get data for templates.
-	data, err := f.templateData(sts)
+	fnCfg, err := f.functionConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	// Generate a ConfigMap from the function config.
+	fnConfigMap, err := ParseTemplate("function-cm", functionCMTemplate, fnCfg)
+	if err != nil {
+		return nil, err
+	}
+	in = append(in, fnConfigMap)
+
 	// Generate Consul server Resources from templates.
-	templateRs, err := cfunc.ParseTemplates(f.defaultTemplates(), data)
+	templateRs, err := ParseTemplates(f.defaultTemplates(), fnCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +92,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		return nil, err
 	}
 
-	if f.gossipEnabled() {
+	if fnCfg.Data.GossipEnabled {
 		// Add gossip encryption config secret volume to Consul server
 		// StatefulSet.
 		if err := f.injectGossipSecretVolume(stsPatchR); err != nil {
@@ -122,7 +100,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 
 		// Generate gossip Resouces from templates.
-		gossipRs, err := cfunc.ParseTemplates(f.gossipTemplates(), data)
+		gossipRs, err := ParseTemplates(f.gossipTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -130,9 +108,9 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		templateRs = append(templateRs, gossipRs...)
 	}
 
-	if f.agentTLSEnabled() {
+	if fnCfg.Data.AgentTLSEnabled {
 		// Generate agent TLS Resources from templates.
-		tlsRs, err := cfunc.ParseTemplates(f.tlsTemplates(), data)
+		tlsRs, err := ParseTemplates(f.tlsTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -140,9 +118,9 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		templateRs = append(templateRs, tlsRs...)
 	}
 
-	if f.aclBootstrapEnabled() {
+	if fnCfg.Data.ACLBootstrapEnabled {
 		// Generate ACL bootstrap Resources from templates.
-		aclRs, err := cfunc.ParseTemplates(f.aclJobTemplates(), data)
+		aclRs, err := ParseTemplates(f.aclJobTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -150,12 +128,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		templateRs = append(templateRs, aclRs...)
 	}
 
-	// Set function config metadata on generated Resources.
-	if err := f.SetMetadata(templateRs); err != nil {
-		return nil, err
-	}
-
-	if f.agentSidecarInjectorEnabled() {
+	if fnCfg.Data.AgentSidecarInjectorEnabled {
 		// Create sidecar injection patches.
 		sidecarPatches, err := f.getSidecarPatches(in)
 		if err != nil {
@@ -163,7 +136,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 		templateRs = append(templateRs, sidecarPatches...)
 
-		if f.agentTLSEnabled() {
+		if fnCfg.Data.AgentTLSEnabled {
 			sidecarTLSCMs, err := f.getSidecarTLSCMs(sidecarPatches)
 			if err != nil {
 				return nil, err
@@ -175,7 +148,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 			}
 		}
 
-		if f.gossipEnabled() {
+		if fnCfg.Data.GossipEnabled {
 			// Add gossip encryption config secret volume to Consul
 			// agent sidecars.
 			for _, scp := range sidecarPatches {
@@ -190,40 +163,48 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	return append(in, templateRs...), nil
 }
 
-// templateData populates a struct with information needed for Resource
+// functionConfig populates a struct with information needed for Resource
 // templates.
-func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+func (f *filter) functionConfig() (*functionConfig, error) {
+	fnMeta, err := f.rw.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
-
-	// Defaults
-	data := &templateData{
-		ObjectMeta: &fnMeta.ObjectMeta,
-		Replicas:   1,
+	// Make sure function config has metadata.name.
+	if fnMeta.Name == "" {
+		return nil, fmt.Errorf("function config must specify metadata.name.")
 	}
 
-	if sts == nil {
-		// Use defaults if no StatefulSet is provided (needs to be
-		// generated).
-		return data, nil
+	// Set defaults.
+	fnCfg := functionConfig{}
+	fnCfg.Data = functionData{
+		AgentTLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
+		AgentTLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
+		AgentTLSCLISecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
+		GossipSecretName:         fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
+		ACLBootstrapSecretName:   fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
+		Replicas:                 1,
 	}
 
-	// Find the number of replicas for the workload being managed. Defaults
-	// to 1 if replicas is omitted in the input Resource config.
-	value, err := sts.Pipe(yaml.Lookup("spec", "replicas"))
-	if err != nil {
+	// Populate function data from config.
+	if err := yaml.Unmarshal([]byte(f.rw.FunctionConfig.MustString()), &fnCfg); err != nil {
 		return nil, err
 	}
-	if value != nil {
-		data.Replicas, err = strconv.Atoi(value.YNode().Value)
-		if err != nil {
-			return nil, err
-		}
+
+	// Set app labels.
+	if fnCfg.Labels == nil {
+		fnCfg.Labels = make(map[string]string)
+	}
+	name, ok := fnCfg.Labels["app.kubernetes.io/name"]
+	if !ok || name == "" {
+		fnCfg.Labels["app.kubernetes.io/name"] = "consul-server"
+	}
+	instance, ok := fnCfg.Labels["app.kubernetes.io/instance"]
+	if !ok || instance == "" {
+		fnCfg.Labels["app.kubernetes.io/instance"] = fnMeta.Name
 	}
 
-	return data, nil
+	return &fnCfg, nil
 }
 
 // injectGossipSecretVolume adds the gossip encryption Consul config secret as
@@ -234,7 +215,7 @@ func (f *filter) templateData(sts *yaml.RNode) (*templateData, error) {
 // removed once that's fixed.
 func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
 	// Get data for templates.
-	data, err := f.templateData(sts)
+	data, err := f.functionConfig()
 	if err != nil {
 		return err
 	}
@@ -279,55 +260,66 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 			break
 		}
 	}
-	if sts == nil {
-		return nil, nil
-	}
 
 	return sts, nil
 }
 
-func (f *filter) gossipEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "gossipEncryption", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
+func (f *filter) getACLJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
 	}
 
-	return false
+	var cm *yaml.RNode
+	for _, r := range in {
+		rMeta, err := r.GetMeta()
+		if err != nil {
+			return nil, err
+		}
+
+		switch {
+		case rMeta.Kind != "ConfigMap":
+			fallthrough
+		case rMeta.Name != fnMeta.Name+"-acl-bootstrap-env":
+			fallthrough
+		case rMeta.Namespace != fnMeta.Namespace:
+			continue
+		}
+
+		cm = r
+		break
+	}
+
+	return cm, nil
 }
 
-func (f *filter) agentTLSEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "agentTLSEncryption", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
+func (f *filter) getGossipJobEnv(in []*yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+	if err != nil {
+		return nil, err
 	}
 
-	return false
-}
+	var cm *yaml.RNode
+	for _, r := range in {
+		rMeta, err := r.GetMeta()
+		if err != nil {
+			return nil, err
+		}
 
-func (f *filter) aclBootstrapEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "aclBootstrap", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
+		switch {
+		case rMeta.Kind != "ConfigMap":
+			fallthrough
+		case rMeta.Name != fnMeta.Name+"-gossip-encryption-env":
+			fallthrough
+		case rMeta.Namespace != fnMeta.Namespace:
+			continue
+		}
+
+		cm = r
+		break
 	}
 
-	return false
-}
-
-func (f *filter) agentSidecarInjectorEnabled() bool {
-	enabled, _ := f.RW.FunctionConfig.Pipe(
-		yaml.Lookup("spec", "agentSidecarInjector", "enabled"),
-	)
-	if enabled != nil && enabled.Document().Value == "true" {
-		return true
-	}
-
-	return false
+	return cm, nil
 }
 
 // getSidecarPatches returns patches with a sidecar added.
@@ -376,7 +368,7 @@ func sidecarResources(in []*yaml.RNode) (map[*yaml.RNode]*yaml.RNode, error) {
 
 // getSidecarPatch returns a patch with a sidecar added.
 func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNode, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	fnMeta, err := f.rw.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +428,7 @@ func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNod
 }
 
 func (f *filter) getSidecarTLSCMs(in []*yaml.RNode) ([]*yaml.RNode, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	fnMeta, err := f.rw.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -493,4 +485,53 @@ func requireSidecarTLSVolumes(in []*yaml.RNode) error {
 	}
 
 	return nil
+}
+
+func fixStyles(in ...*yaml.RNode) error {
+	for _, r := range in {
+		r.YNode().Style = 0
+		switch r.YNode().Kind {
+		case yaml.MappingNode:
+			err := r.VisitFields(func(node *yaml.MapNode) error {
+				return fixStyles(node.Value)
+			})
+			if err != nil {
+				return err
+			}
+		case yaml.SequenceNode:
+			err := r.VisitElements(func(node *yaml.RNode) error {
+				return fixStyles(node)
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func ParseTemplates(tmpls map[string]string, data interface{}) ([]*yaml.RNode, error) {
+	templateRs := []*yaml.RNode{}
+	for name, tmpl := range tmpls {
+		r, err := ParseTemplate(name, tmpl, data)
+		if err != nil {
+			return nil, err
+		}
+		templateRs = append(templateRs, r)
+	}
+
+	return templateRs, nil
+}
+
+func ParseTemplate(name, tmpl string, data interface{}) (*yaml.RNode, error) {
+	buff := &bytes.Buffer{}
+	t := template.Must(template.New(name).Parse(tmpl))
+	if err := t.Execute(buff, data); err != nil {
+		return nil, err
+	}
+	r, err := yaml.Parse(buff.String())
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
 }
