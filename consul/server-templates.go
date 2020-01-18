@@ -1,16 +1,16 @@
 package main
 
-func (f *filter) defaultTemplates() map[string]string {
+func (f *filter) serverTemplates() map[string]string {
 	return map[string]string{
-		"cm":      cmTemplate,
-		"sts":     stsTemplate,
-		"svc":     svcTemplate,
-		"dns-svc": dnsSvcTemplate,
-		"ui-svc":  uiSvcTemplate,
+		"server-cm":      serverCmTemplate,
+		"server-sts":     serverStsTemplate,
+		"server-svc":     serverSvcTemplate,
+		"server-dns-svc": serverDNSSvcTemplate,
+		"server-ui-svc":  serverUISvcTemplate,
 	}
 }
 
-var cmTemplate = `apiVersion: v1
+var serverCmTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Name }}-server
@@ -31,7 +31,7 @@ data:
     }
 `
 
-var stsTemplate = `apiVersion: apps/v1
+var serverStsTemplate = `apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: {{ .Name }}-server
@@ -144,7 +144,7 @@ spec:
                   name: {{ .Name }}-server
 `
 
-var svcTemplate = `apiVersion: v1
+var serverSvcTemplate = `apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Name }}-server
@@ -191,7 +191,7 @@ spec:
       targetPort: dns-udp
 `
 
-var dnsSvcTemplate = `apiVersion: v1
+var serverDNSSvcTemplate = `apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Name }}-server-dns
@@ -214,7 +214,7 @@ spec:
       targetPort: dns-udp
 `
 
-var uiSvcTemplate = `apiVersion: v1
+var serverUISvcTemplate = `apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Name }}-server-ui

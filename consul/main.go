@@ -81,7 +81,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	in = append(in, fnConfigMap)
 
 	// Generate Consul server Resources from templates.
-	templateRs, err := ParseTemplates(f.defaultTemplates(), fnCfg)
+	templateRs, err := ParseTemplates(f.serverTemplates(), fnCfg)
 	if err != nil {
 		return nil, err
 	}
