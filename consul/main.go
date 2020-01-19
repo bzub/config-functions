@@ -342,7 +342,7 @@ func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNod
 	data.ConsulName = fnMeta.Name
 	data.ConsulNamespace = fnMeta.Namespace
 	data.ConsulServiceFQDN = fmt.Sprintf(
-		"%v.%v.svc.cluster.local", fnMeta.Name, fnMeta.Namespace,
+		"%v-server.%v.svc.cluster.local", fnMeta.Name, fnMeta.Namespace,
 	)
 
 	// Populate resource specific patch template data.
