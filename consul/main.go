@@ -6,6 +6,7 @@ import (
 	"os"
 	"text/template"
 
+	"github.com/bzub/config-functions/cfunc"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -63,7 +64,7 @@ func main() {
 // Filter generates Resources.
 func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Workaround single line style of function config.
-	if err := fixStyles(in...); err != nil {
+	if err := cfunc.FixStyles(in...); err != nil {
 		return nil, err
 	}
 
@@ -74,14 +75,14 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	// Generate a ConfigMap from the function config.
-	fnConfigMap, err := ParseTemplate("function-cm", functionCMTemplate, fnCfg)
+	fnConfigMap, err := cfunc.ParseTemplate("function-cm", functionCMTemplate, fnCfg)
 	if err != nil {
 		return nil, err
 	}
 	in = append(in, fnConfigMap)
 
 	// Generate Consul server Resources from templates.
-	templateRs, err := ParseTemplates(f.serverTemplates(), fnCfg)
+	templateRs, err := cfunc.ParseTemplates(f.serverTemplates(), fnCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 
 		// Generate gossip Resouces from templates.
-		gossipRs, err := ParseTemplates(f.gossipTemplates(), fnCfg)
+		gossipRs, err := cfunc.ParseTemplates(f.gossipTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +111,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 	if fnCfg.Data.AgentTLSEnabled {
 		// Generate agent TLS Resources from templates.
-		tlsRs, err := ParseTemplates(f.tlsTemplates(), fnCfg)
+		tlsRs, err := cfunc.ParseTemplates(f.tlsTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -120,7 +121,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 	if fnCfg.Data.ACLBootstrapEnabled {
 		// Generate ACL bootstrap Resources from templates.
-		aclRs, err := ParseTemplates(f.aclJobTemplates(), fnCfg)
+		aclRs, err := cfunc.ParseTemplates(f.aclJobTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
@@ -423,53 +424,4 @@ func requireSidecarTLSVolumes(in []*yaml.RNode) error {
 	}
 
 	return nil
-}
-
-func fixStyles(in ...*yaml.RNode) error {
-	for _, r := range in {
-		r.YNode().Style = 0
-		switch r.YNode().Kind {
-		case yaml.MappingNode:
-			err := r.VisitFields(func(node *yaml.MapNode) error {
-				return fixStyles(node.Value)
-			})
-			if err != nil {
-				return err
-			}
-		case yaml.SequenceNode:
-			err := r.VisitElements(func(node *yaml.RNode) error {
-				return fixStyles(node)
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func ParseTemplates(tmpls map[string]string, data interface{}) ([]*yaml.RNode, error) {
-	templateRs := []*yaml.RNode{}
-	for name, tmpl := range tmpls {
-		r, err := ParseTemplate(name, tmpl, data)
-		if err != nil {
-			return nil, err
-		}
-		templateRs = append(templateRs, r)
-	}
-
-	return templateRs, nil
-}
-
-func ParseTemplate(name, tmpl string, data interface{}) (*yaml.RNode, error) {
-	buff := &bytes.Buffer{}
-	t := template.Must(template.New(name).Parse(tmpl))
-	if err := t.Execute(buff, data); err != nil {
-		return nil, err
-	}
-	r, err := yaml.Parse(buff.String())
-	if err != nil {
-		return nil, err
-	}
-	return r, nil
 }
