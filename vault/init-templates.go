@@ -68,22 +68,23 @@ rules:
     resources:
       - secrets
     verbs:
-      - get
-      - list
       - create
-  - apiGroups:
-      - ""
-    resources:
-      - pods
-    verbs:
-      - get
-      - list
   - apiGroups:
       - ""
     resources:
       - pods/exec
     verbs:
       - create
+    resourceNames:
+      - {{ .Name }}-server-0
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+    resourceNames:
+      - {{ .Name }}-server-0
 `
 
 var initRoleBindingTemplate = `apiVersion: rbac.authorization.k8s.io/v1

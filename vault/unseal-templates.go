@@ -83,14 +83,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - secrets
-    verbs:
-      - get
-      - list
-      - create
-  - apiGroups:
-      - ""
-    resources:
       - pods
     verbs:
       - get
