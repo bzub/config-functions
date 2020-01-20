@@ -92,7 +92,7 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 		}
 		value = node.Content[i].Value
 
-		// do stuff
+		// Convert KV string values into associated functionData types.
 		switch {
 		case key == "agent_tls_enabled" && value == "true":
 			d.AgentTLSEnabled = true

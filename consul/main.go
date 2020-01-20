@@ -159,7 +159,7 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 	}
 
-	// Merge our templated Resources into the input Resources.
+	// Return the input + generated resources + patches.
 	return append(in, templateRs...), nil
 }
 
