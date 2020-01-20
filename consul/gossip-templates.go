@@ -46,7 +46,7 @@ spec:
               name: config-generated
       containers:
         - name: create-gossip-encryption-config-secret
-          image: k8s.gcr.io/hyperkube:v1.17.0
+          image: k8s.gcr.io/hyperkube:v1.17.1
           command:
             - /bin/sh
             - -ec

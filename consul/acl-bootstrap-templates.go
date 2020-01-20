@@ -19,13 +19,12 @@ metadata:
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
   template:
-    metadata:
     spec:
       serviceAccountName: {{ .Name }}-acl-bootstrap
       restartPolicy: OnFailure
       containers:
         - name: consul-acl-bootstrap
-          image: k8s.gcr.io/hyperkube:v1.17.0
+          image: k8s.gcr.io/hyperkube:v1.17.1
           command:
             - /bin/sh
             - -ec

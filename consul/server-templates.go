@@ -55,7 +55,6 @@ spec:
         app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
         app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
     spec:
-      terminationGracePeriodSeconds: 10
       securityContext:
         fsGroup: 1000
       containers:
