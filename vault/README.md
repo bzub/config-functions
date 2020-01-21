@@ -4,6 +4,12 @@
 
 Creates Resource configs to deploy [Vault][vault] on Kubernetes.
 
+## Function Features
+
+The function ConfigMap and associated types are defined in
+[functionConfig.go](./functionConfig.go). The `functionData` type in that file
+has detailed documentation about all available options.
+
 ## Getting Started
 
 In the following example we create Resource configs for a basic, no-frills

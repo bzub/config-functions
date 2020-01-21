@@ -36,50 +36,58 @@ type functionConfig struct {
 }
 
 type functionData struct {
-	// AgentTLSEnabled creates a Job which populates a Secret with Consul
-	// agent TLS assests, and configures a Consul StatefulSet to use said
-	// Secret.
-	AgentTLSEnabled bool `yaml:"agent_tls_enabled,omitempty"`
-
-	// GossipEnabled creates a Job which creates a Consul gossip encryption
-	// key Secret, and configures a Consul StatefulSet to use said
-	// key/Secret.
-	GossipEnabled bool `yaml:"gossip_enabled,omitempty"`
+	// Replicas is the number of configured Consul server replicas. Used
+	// for other options like --bootstrap-expect.
+	Replicas int `yaml:"replicas"`
 
 	// ACLBootstrapEnabled creates a Job (and associated resources) which
 	// executes `consul acl bootstrap` on a new Consul cluster, and stores
 	// the bootstrap token information in a Secret.
-	ACLBootstrapEnabled bool `yaml:"acl_bootstrap_enabled,omitempty"`
+	//
+	// https://learn.hashicorp.com/consul/day-0/acl-guide
+	ACLBootstrapEnabled bool `yaml:"acl_bootstrap_enabled"`
 
 	// AgentSidecarInjectorEnabled adds a Consul Agent sidecar container to
 	// workload configs that contain the
 	// `config.bzub.dev/consul-agent-sidecar-injector` annotation with a
 	// value that targets the desired Consul server instance.
-	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled,omitempty"`
+	//
+	// https://www.consul.io/docs/agent/basics.html
+	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
-	// AgentTLSServerSecretName is the name of the Secret used to hold
-	// Consul server TLS assets.
-	AgentTLSServerSecretName string `yaml:"agent_tls_server_secret_name,omitempty"`
+	// AgentTLSEnabled creates a Job which populates a Secret with Consul
+	// agent TLS assests, and configures a Consul StatefulSet to use said
+	// Secret.
+	//
+	// https://learn.hashicorp.com/consul/security-networking/certificates
+	AgentTLSEnabled bool `yaml:"agent_tls_enabled"`
 
-	// AgentTLSCASecretName is the name of the Secret used to hold
-	// Consul CA certificates.
-	AgentTLSCASecretName string `yaml:"agent_tls_ca_secret_name,omitempty"`
-
-	// AgentTLSCLISecretName is the name of the Secret used to hold
-	// Consul CLI TLS assets.
-	AgentTLSCLISecretName string `yaml:"agent_tls_cli_secret_name,omitempty"`
-
-	// GossipSecretName is the name of the Secret used to hold the Consul
-	// gossip encryption key/config.
-	GossipSecretName string `yaml:"gossip_secret_name,omitempty"`
+	// GossipEnabled creates a Job which creates a Consul gossip encryption
+	// key Secret, and configures a Consul StatefulSet to use said
+	// key/Secret.
+	//
+	// https://learn.hashicorp.com/consul/security-networking/agent-encryption
+	GossipEnabled bool `yaml:"gossip_enabled"`
 
 	// ACLBootstrapSecretName is the name of the Secret used to hold Consul
 	// cluster ACL bootstrap information.
-	ACLBootstrapSecretName string `yaml:"acl_bootstrap_secret_name,omitempty"`
+	ACLBootstrapSecretName string `yaml:"acl_bootstrap_secret_name"`
 
-	// Replicas is the number of configured Consul server replicas. Used
-	// for other options like --bootstrap-expect.
-	Replicas int `yaml:"replicas,omitempty"`
+	// AgentTLSServerSecretName is the name of the Secret used to hold
+	// Consul server TLS assets.
+	AgentTLSServerSecretName string `yaml:"agent_tls_server_secret_name"`
+
+	// AgentTLSCASecretName is the name of the Secret used to hold
+	// Consul CA certificates.
+	AgentTLSCASecretName string `yaml:"agent_tls_ca_secret_name"`
+
+	// AgentTLSCLISecretName is the name of the Secret used to hold
+	// Consul CLI TLS assets.
+	AgentTLSCLISecretName string `yaml:"agent_tls_cli_secret_name"`
+
+	// GossipSecretName is the name of the Secret used to hold the Consul
+	// gossip encryption key/config.
+	GossipSecretName string `yaml:"gossip_secret_name"`
 }
 
 func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
