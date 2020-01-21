@@ -1,12 +1,14 @@
 [consul]: https://www.consul.io/
-[gossip-encryption]: https://learn.hashicorp.com/consul/security-networking/agent-encryption
-[agent-tls]: https://learn.hashicorp.com/consul/security-networking/certificates
-[acl-bootstrap]: https://learn.hashicorp.com/consul/day-0/acl-guide
-[agent-sidecar]: https://www.consul.io/docs/agent/basics.html
 
 # Consul Configuration Function
 
 Creates Resource configs to deploy [Consul][consul] on Kubernetes.
+
+## Function Features
+
+The function ConfigMap and associated types are defined in
+[functionConfig.go](./functionConfig.go). The `functionData` type in that file
+has detailed documentation about all available options.
 
 ## Getting Started
 
@@ -178,40 +180,3 @@ Cleanup the demo workspace.
 ```sh
 rm -rf $DEMO
 ```
-
-## Function Features
-
-### [Gossip Encryption Job][gossip-encryption]
-
-With `spec.gossipEncryption.enabled=true` the Consul config function creates a
-Job which creates a Consul gossip encryption key Secret, and configures a
-Consul StatefulSet to use said key/Secret.
-
-### [Agent TLS Encryption Job][agent-tls]
-
-With `spec.agentTLSEncryption.enabled=true` the Consul config function creates
-a Job which populates a Secret with Consul agent TLS assests, and configures a
-Consul StatefulSet to use said Secret.
-
-### [Automated ACL Bootstrap Job][acl-bootstrap]
-
-With `spec.aclBootstrap.enabled=true` the Consul config function generates a
-Job (and associated resources) which executes `consul acl bootstrap` on a new
-Consul cluster, and stores the bootstrap token information in a Secret.
-
-### High Availability
-
-High Availability via Services backed by StatefulSet replicas. The function
-takes care of ensuring various settings are updated depending on how you
-configure the StatefulSet.
-
-### [Agent Sidecar Injector][agent-sidecar]
-
-With `spec.agentSidecarInjector.enabled=true` the Consul config function adds a
-Consul Agent sidecar container to workload configs that contain the
-`config.bzub.dev/consul-agent-sidecar-injector` annotation with a value that
-targets the desired Consul server instance.
-
-For an example see the [sidecar injector
-annotation](./productionExample.md#sidecar-injector-annotation) section of the
-[production example](./productionExample.md).

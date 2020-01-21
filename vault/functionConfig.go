@@ -29,15 +29,15 @@ type functionConfig struct {
 type functionData struct {
 	// InitEnabled creates a Job which performs "vault operator init" on a
 	// new Vault cluster, and stores unseal keys in a Secret.
-	InitEnabled bool `yaml:"init_enabled,omitempty"`
+	InitEnabled bool `yaml:"init_enabled"`
 
 	// UnsealEnabled creates a Job which performs "vault operator unseal"
 	// on a Vault cluster.
-	UnsealEnabled bool `yaml:"unseal_enabled,omitempty"`
+	UnsealEnabled bool `yaml:"unseal_enabled"`
 
 	// UnsealSecretName is the name of the Secret used to hold unseal key
 	// shares.
-	UnsealSecretName string `yaml:"unseal_secret_name,omitempty"`
+	UnsealSecretName string `yaml:"unseal_secret_name"`
 }
 
 func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
