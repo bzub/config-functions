@@ -1,6 +1,6 @@
-package main
+package vault
 
-func (f *filter) serverTemplates() map[string]string {
+func (f *VaultFilter) serverTemplates() map[string]string {
 	return map[string]string{
 		"server-cm":  serverCmTemplate,
 		"server-sts": serverStsTemplate,

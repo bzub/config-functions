@@ -1,6 +1,6 @@
-package main
+package vault
 
-func (f *filter) unsealJobTemplates() map[string]string {
+func (f *VaultFilter) unsealJobTemplates() map[string]string {
 	return map[string]string{
 		"unseal-job":         unsealJobTemplate,
 		"unseal-sa":          unsealSATemplate,

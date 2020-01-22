@@ -1,6 +1,6 @@
-package main
+package consul
 
-func (f *filter) serverTemplates() map[string]string {
+func (f *ConsulFilter) serverTemplates() map[string]string {
 	return map[string]string{
 		"server-cm":      serverCmTemplate,
 		"server-sts":     serverStsTemplate,

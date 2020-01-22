@@ -1,6 +1,6 @@
-package main
+package consul
 
-func (f *filter) aclJobTemplates() map[string]string {
+func (f *ConsulFilter) aclJobTemplates() map[string]string {
 	return map[string]string{
 		"acl-job":         aclJobTemplate,
 		"acl-sa":          aclSATemplate,

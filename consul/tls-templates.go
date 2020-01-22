@@ -1,6 +1,6 @@
-package main
+package consul
 
-func (f *filter) tlsTemplates() map[string]string {
+func (f *ConsulFilter) tlsTemplates() map[string]string {
 	return map[string]string{
 		"tls-job":         tlsJobTemplate,
 		"tls-sa":          tlsSATemplate,

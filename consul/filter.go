@@ -1,22 +1,20 @@
-package main
+package consul
 
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"text/template"
 
 	"github.com/bzub/config-functions/cfunc"
 	"sigs.k8s.io/kustomize/kyaml/kio"
-	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 const casiAnnotation = "config.bzub.dev/consul-agent-sidecar-injector"
 
-// filter implements kio.Filter
-type filter struct {
-	rw *kio.ByteReadWriter
+// ConsulFilter implements kio.Filter
+type ConsulFilter struct {
+	RW *kio.ByteReadWriter
 }
 
 // sidecarTemplateData holds information used in agent sidecar patches.
@@ -38,31 +36,8 @@ type sidecarTemplateData struct {
 	ConsulNamespace string
 }
 
-func main() {
-	rw := &kio.ByteReadWriter{
-		Reader:                os.Stdin,
-		Writer:                os.Stdout,
-		KeepReaderAnnotations: true,
-	}
-
-	err := kio.Pipeline{
-		Inputs: []kio.Reader{rw},
-		Filters: []kio.Filter{
-			&filter{rw},
-			&filters.MergeFilter{},
-			&filters.FormatFilter{},
-			&filters.FileSetter{},
-		},
-		Outputs: []kio.Writer{rw},
-	}.Execute()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-}
-
 // Filter generates Resources.
-func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
+func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Workaround single line style of function config.
 	if err := cfunc.FixStyles(in...); err != nil {
 		return nil, err
@@ -166,8 +141,8 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 // functionConfig populates a struct with information needed for Resource
 // templates.
-func (f *filter) functionConfig() (*functionConfig, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+func (f *ConsulFilter) functionConfig() (*functionConfig, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +163,7 @@ func (f *filter) functionConfig() (*functionConfig, error) {
 	}
 
 	// Populate function data from config.
-	if err := yaml.Unmarshal([]byte(f.rw.FunctionConfig.MustString()), &fnCfg); err != nil {
+	if err := yaml.Unmarshal([]byte(f.RW.FunctionConfig.MustString()), &fnCfg); err != nil {
 		return nil, err
 	}
 
@@ -210,7 +185,7 @@ func (f *filter) functionConfig() (*functionConfig, error) {
 
 // injectGossipSecretVolume adds the gossip encryption Consul config secret as
 // a projected volume source to the volume called "consul-configs".
-func (f *filter) injectGossipSecretVolume(sts *yaml.RNode) error {
+func (f *ConsulFilter) injectGossipSecretVolume(sts *yaml.RNode) error {
 	// Get data for templates.
 	data, err := f.functionConfig()
 	if err != nil {
@@ -262,7 +237,7 @@ func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
 }
 
 // getSidecarPatches returns patches with a sidecar added.
-func (f *filter) getSidecarPatches(in []*yaml.RNode) ([]*yaml.RNode, error) {
+func (f *ConsulFilter) getSidecarPatches(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Get resources that are calling for sidecar injection.
 	sidecarRs, err := sidecarResources(in)
 	if err != nil {
@@ -306,8 +281,8 @@ func sidecarResources(in []*yaml.RNode) (map[*yaml.RNode]*yaml.RNode, error) {
 }
 
 // getSidecarPatch returns a patch with a sidecar added.
-func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNode, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+func (f *ConsulFilter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -366,8 +341,8 @@ func (f *filter) getSidecarPatch(in []*yaml.RNode, r, c *yaml.RNode) (*yaml.RNod
 	return p, nil
 }
 
-func (f *filter) getSidecarTLSCMs(in []*yaml.RNode) ([]*yaml.RNode, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+func (f *ConsulFilter) getSidecarTLSCMs(in []*yaml.RNode) ([]*yaml.RNode, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}

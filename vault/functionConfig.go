@@ -1,4 +1,4 @@
-package main
+package vault
 
 import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"

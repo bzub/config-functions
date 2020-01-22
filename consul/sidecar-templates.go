@@ -1,4 +1,4 @@
-package main
+package consul
 
 var sidecarPatchTemplate = `apiVersion: {{ .APIVersion }}
 kind: {{ .Kind }}

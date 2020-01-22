@@ -1,45 +1,20 @@
-package main
+package vault
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/bzub/config-functions/cfunc"
 	"sigs.k8s.io/kustomize/kyaml/kio"
-	"sigs.k8s.io/kustomize/kyaml/kio/filters"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
 // filter implements kio.Filter
-type filter struct {
-	rw *kio.ByteReadWriter
-}
-
-func main() {
-	rw := &kio.ByteReadWriter{
-		Reader:                os.Stdin,
-		Writer:                os.Stdout,
-		KeepReaderAnnotations: true,
-	}
-
-	err := kio.Pipeline{
-		Inputs: []kio.Reader{rw},
-		Filters: []kio.Filter{
-			&filter{rw},
-			&filters.MergeFilter{},
-			&filters.FormatFilter{},
-			&filters.FileSetter{},
-		},
-		Outputs: []kio.Writer{rw},
-	}.Execute()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
+type VaultFilter struct {
+	RW *kio.ByteReadWriter
 }
 
 // Filter generates Resources.
-func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
+func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Workaround single line style of function config.
 	if err := cfunc.FixStyles(in...); err != nil {
 		return nil, err
@@ -89,8 +64,8 @@ func (f *filter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 // functionConfig populates a struct with information needed for Resource
 // templates.
-func (f *filter) functionConfig() (*functionConfig, error) {
-	fnMeta, err := f.rw.FunctionConfig.GetMeta()
+func (f *VaultFilter) functionConfig() (*functionConfig, error) {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +81,7 @@ func (f *filter) functionConfig() (*functionConfig, error) {
 	}
 
 	// Populate function data from config.
-	if err := yaml.Unmarshal([]byte(f.rw.FunctionConfig.MustString()), &fnCfg); err != nil {
+	if err := yaml.Unmarshal([]byte(f.RW.FunctionConfig.MustString()), &fnCfg); err != nil {
 		return nil, err
 	}
 
