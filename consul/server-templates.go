@@ -141,6 +141,10 @@ spec:
             sources:
               - configMap:
                   name: {{ .Name }}-server
+{{ if .Data.GossipEnabled }}
+              - secret:
+                  name: {{ .Data.GossipSecretName }}
+{{ end }}
 `
 
 var serverSvcTemplate = `apiVersion: v1

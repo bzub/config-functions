@@ -9,11 +9,6 @@ func (f *ConsulFilter) gossipTemplates() map[string]string {
 	}
 }
 
-var gossipSecretVolumeTemplate = `
-- secret:
-    name: {{ .Data.GossipSecretName }}
-`
-
 var gossipJobTemplate = `apiVersion: batch/v1
 kind: Job
 metadata:

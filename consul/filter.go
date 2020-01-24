@@ -1,9 +1,7 @@
 package consul
 
 import (
-	"bytes"
 	"fmt"
-	"text/template"
 
 	"github.com/bzub/config-functions/cfunc"
 	"sigs.k8s.io/kustomize/kyaml/kio"
@@ -44,19 +42,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 	generatedRs = append(generatedRs, serverRs...)
 
-	// Get templated patch StatefulSet.
-	stsPatchR, err := getConsulStatefulSet(serverRs)
-	if err != nil {
-		return nil, err
-	}
-
 	if fnCfg.Data.GossipEnabled {
-		// Add gossip encryption config secret volume to Consul server
-		// StatefulSet.
-		if err := f.injectGossipSecretVolume(stsPatchR); err != nil {
-			return nil, err
-		}
-
 		// Generate gossip Resouces from templates.
 		gossipRs, err := cfunc.ParseTemplates(f.gossipTemplates(), fnCfg)
 		if err != nil {
@@ -128,57 +114,4 @@ func (f *ConsulFilter) functionConfig() (*functionConfig, error) {
 	}
 
 	return &fnCfg, nil
-}
-
-// injectGossipSecretVolume adds the gossip encryption Consul config secret as
-// a projected volume source to the volume called "consul-configs".
-func (f *ConsulFilter) injectGossipSecretVolume(sts *yaml.RNode) error {
-	// Get data for templates.
-	data, err := f.functionConfig()
-	if err != nil {
-		return err
-	}
-
-	// Execute the projected volume source template.
-	buff := &bytes.Buffer{}
-	t := template.Must(template.New("gossip-pvs").Parse(gossipSecretVolumeTemplate))
-	if err := t.Execute(buff, data); err != nil {
-		return err
-	}
-	vol, err := yaml.Parse(buff.String())
-	if err != nil {
-		return err
-	}
-
-	// Add secret volume to projected volume.
-	err = sts.PipeE(
-		yaml.Lookup(
-			"spec", "template", "spec", "volumes",
-			"[name=consul-configs]", "projected", "sources",
-		),
-		yaml.Append(vol.YNode().Content...),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func getConsulStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
-	// Find the StatefulSet
-	var sts *yaml.RNode
-	for _, r := range in {
-		rMeta, err := r.GetMeta()
-		if err != nil {
-			return nil, err
-		}
-
-		if rMeta.Kind == "StatefulSet" {
-			sts = r
-			break
-		}
-	}
-
-	return sts, nil
 }
