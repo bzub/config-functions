@@ -71,7 +71,7 @@ EXPECTED='apiVersion: v1
 kind: ConfigMap
 metadata:
   name: my-consul
-  namespace: example
+  namespace: "example"
   labels:
     app.kubernetes.io/instance: my-consul
     app.kubernetes.io/name: consul-server
@@ -90,6 +90,7 @@ data:
   gossip_secret_name: "my-consul-example-gossip"'
 
 TEST="$(cat $DEMO/function-config.yaml)"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

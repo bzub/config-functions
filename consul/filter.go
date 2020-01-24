@@ -33,16 +33,19 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	in = append(in, fnConfigMap)
+
+	// Start building our generated Resource slice.
+	generatedRs := []*yaml.RNode{fnConfigMap}
 
 	// Generate Consul server Resources from templates.
-	templateRs, err := cfunc.ParseTemplates(f.serverTemplates(), fnCfg)
+	serverRs, err := cfunc.ParseTemplates(f.serverTemplates(), fnCfg)
 	if err != nil {
 		return nil, err
 	}
+	generatedRs = append(generatedRs, serverRs...)
 
 	// Get templated patch StatefulSet.
-	stsPatchR, err := getConsulStatefulSet(templateRs)
+	stsPatchR, err := getConsulStatefulSet(serverRs)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +62,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		templateRs = append(templateRs, gossipRs...)
+		generatedRs = append(generatedRs, gossipRs...)
 	}
 
 	if fnCfg.Data.AgentTLSEnabled {
@@ -69,8 +71,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		templateRs = append(templateRs, tlsRs...)
+		generatedRs = append(generatedRs, tlsRs...)
 	}
 
 	if fnCfg.Data.ACLBootstrapEnabled {
@@ -79,12 +80,11 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		templateRs = append(templateRs, aclRs...)
+		generatedRs = append(generatedRs, aclRs...)
 	}
 
-	// Return the input + generated resources + patches.
-	return append(in, templateRs...), nil
+	// Return the generated resources + patches + input.
+	return append(generatedRs, in...), nil
 }
 
 // functionConfig populates a struct with information needed for Resource

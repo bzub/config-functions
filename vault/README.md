@@ -68,7 +68,7 @@ EXPECTED='apiVersion: v1
 kind: ConfigMap
 metadata:
   name: my-vault
-  namespace: example
+  namespace: "example"
   labels:
     app.kubernetes.io/instance: my-vault
     app.kubernetes.io/name: vault-server

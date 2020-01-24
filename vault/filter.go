@@ -31,14 +31,16 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	in = append(in, fnConfigMap)
+
+	// Start building our generated Resource slice.
+	generatedRs := []*yaml.RNode{fnConfigMap}
 
 	// Generate Vault server Resources from templates.
 	serverRs, err := cfunc.ParseTemplates(f.serverTemplates(), fnCfg)
 	if err != nil {
 		return nil, err
 	}
-	in = append(in, serverRs...)
+	generatedRs = append(generatedRs, serverRs...)
 
 	if fnCfg.Data.InitEnabled {
 		// Generate agent TLS Resources from templates.
@@ -46,7 +48,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		in = append(in, initRs...)
+		generatedRs = append(generatedRs, initRs...)
 	}
 
 	if fnCfg.Data.UnsealEnabled {
@@ -55,11 +57,11 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		in = append(in, unsealRs...)
+		generatedRs = append(generatedRs, unsealRs...)
 	}
 
-	// Return the input + generated resources + patches.
-	return in, nil
+	// Return the generated resources + patches + input.
+	return append(generatedRs, in...), nil
 }
 
 // functionConfig populates a struct with information needed for Resource
