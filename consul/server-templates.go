@@ -40,7 +40,7 @@ metadata:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 spec:
-  replicas: {{ .Data.Replicas }}
+  replicas: 1 # {"description":"Consul server replicas.","type":"integer","x-kustomize":{"setter":{"name":"{{ .Name }}-replicas","value":"1"}}}
   serviceName: {{ .Name }}-server
   podManagementPolicy: Parallel
   updateStrategy:
@@ -82,7 +82,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
             - name: CONSUL_REPLICAS
-              value: "{{ .Data.Replicas }}"
+              value: "1" # {"description":"Consul server replicas.","type":"string","x-kustomize":{"setter":{"name":"{{ .Name }}-replicas","value":"1"}}}
           volumeMounts:
             - name: consul-data
               mountPath: /consul/data

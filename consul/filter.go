@@ -159,7 +159,6 @@ func (f *ConsulFilter) functionConfig() (*functionConfig, error) {
 		AgentTLSCLISecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
 		GossipSecretName:         fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
 		ACLBootstrapSecretName:   fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
-		Replicas:                 1,
 	}
 
 	// Populate function data from config.

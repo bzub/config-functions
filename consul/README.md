@@ -80,7 +80,6 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  replicas: "1"
   acl_bootstrap_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
   agent_sidecar_injector_enabled: "false"
@@ -135,32 +134,27 @@ kustomize config tree --field="spec.selector" --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
-### Replicas
+### Setters
 
-If `data.replicas` is undefined in the function config, the function assumes
-one replica and sets other options accordingly.
-<!-- @verifyConsulReplicas1 @test -->
+Some parts of the configuration can be modified via `kustomize config set`.
+
+<!-- @listDefaultSetters @test -->
 ```sh
-EXPECTED='.
-└── [Resource]  StatefulSet example/my-consul-server
-    ├── spec.replicas: 1
-    └── spec.template.spec.containers
-        └── 0
-            └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "1"}'
+EXPECTED=\
+"my-consul-replicas"
 
-TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
-  kustomize config tree --graph-structure=owners --replicas \
-    --field="spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS]")"
+TEST="$(kustomize config set $DEMO|tail -n +2|awk '{print $1}')"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
-Set `data.replicas` in the function config and re-run the function to update
-the number of StatefulSet replicas and to ensure other parts of the config get
-updated as well.
+#### Replicas
+
+To change the number of Consul server replicas, it's recommended to use
+`kustomize config set` because this impacts other areas of the configs.
+
 <!-- @verifyConsulReplicas3 @test -->
 ```sh
-echo '  replicas: "3"' >>$DEMO/function-config.yaml
-kustomize config run $DEMO
+kustomize config set $DEMO my-consul-replicas 3
 
 EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server

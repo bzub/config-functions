@@ -24,7 +24,6 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  replicas: "3"
   agent_tls_enabled: "true"
   gossip_enabled: "true"
   acl_bootstrap_enabled: "true"

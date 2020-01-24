@@ -1,8 +1,6 @@
 package consul
 
 import (
-	"strconv"
-
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
@@ -15,7 +13,6 @@ metadata:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
-  replicas: "{{ .Data.Replicas }}"
   agent_tls_enabled: "{{ .Data.AgentTLSEnabled }}"
   gossip_enabled: "{{ .Data.GossipEnabled }}"
   acl_bootstrap_enabled: "{{ .Data.ACLBootstrapEnabled }}"
@@ -36,10 +33,6 @@ type functionConfig struct {
 }
 
 type functionData struct {
-	// Replicas is the number of configured Consul server replicas. Used
-	// for other options like --bootstrap-expect.
-	Replicas int `yaml:"replicas"`
-
 	// ACLBootstrapEnabled creates a Job (and associated resources) which
 	// executes `consul acl bootstrap` on a new Consul cluster, and stores
 	// the bootstrap token information in a Secret.
@@ -91,7 +84,6 @@ type functionData struct {
 }
 
 func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
-	var err error
 	var key, value string
 	for i := range node.Content {
 		if key == "" {
@@ -120,11 +112,6 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 			d.GossipSecretName = value
 		case key == "acl_bootstrap_secret_name":
 			d.ACLBootstrapSecretName = value
-		case key == "replicas":
-			d.Replicas, err = strconv.Atoi(value)
-			if err != nil {
-				return err
-			}
 		}
 
 		key = ""

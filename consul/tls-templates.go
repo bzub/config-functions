@@ -126,7 +126,7 @@ spec:
               cd "${tls_dir}"
               consul tls ca create
               consul tls cert create -cli
-              for i in $(seq {{ .Data.Replicas }}); do
+              for i in $(seq 3); do
                 consul tls cert create -server
               done
           volumeMounts:
