@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-// filter implements kio.Filter
+// VaultFilter implements kio.Filter
 type VaultFilter struct {
 	RW *kio.ByteReadWriter
 }
@@ -21,7 +21,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	// Get data for templates.
-	fnCfg, err := f.functionConfig()
+	fnCfg, err := f.FunctionConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +64,9 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	return append(generatedRs, in...), nil
 }
 
-// functionConfig populates a struct with information needed for Resource
+// FunctionConfig populates a struct with information needed for Resource
 // templates.
-func (f *VaultFilter) functionConfig() (*functionConfig, error) {
+func (f *VaultFilter) FunctionConfig() (*FunctionConfig, error) {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
@@ -77,8 +77,8 @@ func (f *VaultFilter) functionConfig() (*functionConfig, error) {
 	}
 
 	// Set defaults.
-	fnCfg := functionConfig{}
-	fnCfg.Data = functionData{
+	fnCfg := FunctionConfig{}
+	fnCfg.Data = FunctionData{
 		UnsealSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-unseal",
 	}
 

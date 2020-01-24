@@ -21,7 +21,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	// Get data for templates.
-	fnCfg, err := f.functionConfig()
+	fnCfg, err := f.FunctionConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -73,9 +73,9 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	return append(generatedRs, in...), nil
 }
 
-// functionConfig populates a struct with information needed for Resource
+// FunctionConfig populates a struct with information needed for Resource
 // templates.
-func (f *ConsulFilter) functionConfig() (*functionConfig, error) {
+func (f *ConsulFilter) FunctionConfig() (*FunctionConfig, error) {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
@@ -86,8 +86,8 @@ func (f *ConsulFilter) functionConfig() (*functionConfig, error) {
 	}
 
 	// Set defaults.
-	fnCfg := functionConfig{}
-	fnCfg.Data = functionData{
+	fnCfg := FunctionConfig{}
+	fnCfg.Data = FunctionData{
 		AgentTLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
 		AgentTLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
 		AgentTLSCLISecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",

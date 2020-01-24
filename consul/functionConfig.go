@@ -23,15 +23,17 @@ data:
   acl_bootstrap_secret_name: "{{ .Data.ACLBootstrapSecretName }}"
 `
 
-// functionConfig holds information used in Resource templates.
-type functionConfig struct {
+// FunctionConfig holds information used in Resource templates. It is a Go
+// representation of a Kubernetes ConfigMap Resource.
+type FunctionConfig struct {
 	// ObjectMeta contains Resource metadata to use in templates.
 	yaml.ObjectMeta `yaml:"metadata"`
 
-	Data functionData
+	Data FunctionData
 }
 
-type functionData struct {
+// FunctionData holds settings used in the config function.
+type FunctionData struct {
 	// ACLBootstrapEnabled creates a Job (and associated resources) which
 	// executes `consul acl bootstrap` on a new Consul cluster, and stores
 	// the bootstrap token information in a Secret.
@@ -74,7 +76,9 @@ type functionData struct {
 	GossipSecretName string `yaml:"gossip_secret_name"`
 }
 
-func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
+// UnmarshalYAML implements yaml.Unmarshaler. It ensures all values from
+// a ConfigMap's KV data can be converted into relevant Go types.
+func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 	var key, value string
 	for i := range node.Content {
 		if key == "" {
@@ -83,7 +87,7 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 		}
 		value = node.Content[i].Value
 
-		// Convert KV string values into associated functionData types.
+		// Convert KV string values into associated FunctionData types.
 		switch {
 		case key == "agent_tls_enabled" && value == "true":
 			d.AgentTLSEnabled = true
