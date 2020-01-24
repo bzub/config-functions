@@ -82,7 +82,6 @@ metadata:
 data:
   acl_bootstrap_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
-  agent_sidecar_injector_enabled: "false"
   agent_tls_ca_secret_name: "my-consul-example-tls-ca"
   agent_tls_cli_secret_name: "my-consul-example-tls-cli"
   agent_tls_enabled: "false"

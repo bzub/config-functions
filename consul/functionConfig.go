@@ -16,7 +16,6 @@ data:
   agent_tls_enabled: "{{ .Data.AgentTLSEnabled }}"
   gossip_enabled: "{{ .Data.GossipEnabled }}"
   acl_bootstrap_enabled: "{{ .Data.ACLBootstrapEnabled }}"
-  agent_sidecar_injector_enabled: "{{ .Data.AgentSidecarInjectorEnabled }}"
   agent_tls_server_secret_name: "{{ .Data.AgentTLSServerSecretName }}"
   agent_tls_ca_secret_name: "{{ .Data.AgentTLSCASecretName }}"
   agent_tls_cli_secret_name: "{{ .Data.AgentTLSCLISecretName }}"
@@ -39,14 +38,6 @@ type functionData struct {
 	//
 	// https://learn.hashicorp.com/consul/day-0/acl-guide
 	ACLBootstrapEnabled bool `yaml:"acl_bootstrap_enabled"`
-
-	// AgentSidecarInjectorEnabled adds a Consul Agent sidecar container to
-	// workload configs that contain the
-	// `config.bzub.dev/consul-agent-sidecar-injector` annotation with a
-	// value that targets the desired Consul server instance.
-	//
-	// https://www.consul.io/docs/agent/basics.html
-	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
 	// AgentTLSEnabled creates a Job which populates a Secret with Consul
 	// agent TLS assests, and configures a Consul StatefulSet to use said
@@ -100,8 +91,6 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 			d.GossipEnabled = true
 		case key == "acl_bootstrap_enabled" && value == "true":
 			d.ACLBootstrapEnabled = true
-		case key == "agent_sidecar_injector_enabled" && value == "true":
-			d.AgentSidecarInjectorEnabled = true
 		case key == "agent_tls_server_secret_name":
 			d.AgentTLSServerSecretName = value
 		case key == "agent_tls_ca_secret_name":
