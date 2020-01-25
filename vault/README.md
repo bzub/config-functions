@@ -1,4 +1,6 @@
 [vault]: https://www.vaultproject.io/
+[FunctionConfig]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#FunctionConfig
+[FunctionData]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#FunctionData
 
 # Vault Configuration Function
 
@@ -6,9 +8,9 @@ Creates Resource configs to deploy [Vault][vault] on Kubernetes.
 
 ## Function Features
 
-The function ConfigMap and associated types are defined in
-[functionConfig.go](./functionConfig.go). The `functionData` type in that file
-has detailed documentation about all available options.
+The function ConfigMap is defined in the [FunctionConfig][FunctionConfig] Go
+type. The options available to configure the function are documented in the
+[FunctionData][FunctionData] type.
 
 ## Getting Started
 
@@ -57,7 +59,7 @@ TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
 
 ## Configuration
 
-### Default Configuration Data
+### Default Function Configuration
 
 The function adds any missing configuration fields to the function ConfigMap we
 created above, populating their values with defaults.
@@ -68,7 +70,7 @@ EXPECTED='apiVersion: v1
 kind: ConfigMap
 metadata:
   name: my-vault
-  namespace: example
+  namespace: "example"
   labels:
     app.kubernetes.io/instance: my-vault
     app.kubernetes.io/name: vault-server
@@ -118,6 +120,37 @@ EXPECTED='.
 TEST="$(
 kustomize config grep "kind=Service" $DEMO |\
 kustomize config tree --field="spec.selector" --graph-structure=owners)"
+[ "$TEST" = "$EXPECTED" ]
+```
+
+### Server Configuration
+
+The default configuration for the Vault server is defined in a ConfigMap.
+
+<!-- @verifyDefaultServerConfig @test -->
+```sh
+EXPECTED='apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-vault-server
+  namespace: "example"
+  labels:
+    app.kubernetes.io/instance: my-vault
+    app.kubernetes.io/name: vault-server
+data:
+  00-server-listener.hcl: |-
+    listener "tcp" {
+      tls_disable = 1
+      address = "[::]:8200"
+      cluster_address = "[::]:8201"
+    }
+  00-server-storage-backend.hcl: |-
+    storage "file" {
+      path = "/vault/data"
+    }'
+
+TEST="$(cat $DEMO/my-vault-server_configmap.yaml)"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

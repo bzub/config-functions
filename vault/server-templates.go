@@ -17,13 +17,13 @@ metadata:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
-  00-defaults.hcl: |-
+  00-server-listener.hcl: |-
     listener "tcp" {
       tls_disable = 1
       address = "[::]:8200"
       cluster_address = "[::]:8201"
     }
-  storage-backend.hcl: |-
+  00-server-storage-backend.hcl: |-
     storage "file" {
       path = "/vault/data"
     }
