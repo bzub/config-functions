@@ -27,17 +27,16 @@ spec:
           image: docker.io/jitesoft/cfssl:828c23c
           command:
             - /bin/sh
-            - -exc
+            - -ec
             - |-
               cp /cfssl/configs/*.json /cfssl/certs
               cd /cfssl/certs
-              cfssl gencert -initca 00_ca_csr.json | cfssljson -bare ca -
+              cfssl gencert -initca ca_csr.json | cfssljson -bare ca -
 
               for csr in *_csr.json; do
+                [ "${csr}" = "ca_csr.json" ] && continue
                 instance="$(echo "${csr}"|cut -d"_" -f 1)"
                 profile="$(echo "${csr}" |cut -d"_" -f 2)"
-
-                [ "${profile}" = "ca" ] && continue
 
                 cfssl gencert \
                   -ca=ca.pem \

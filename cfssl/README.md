@@ -11,7 +11,7 @@ configured via [CFSSL][cfssl] JSON configs.
 The Job uses the following naming scheme for CFSSL JSON configs:
 - `config.json` (required) is passed to `cfssl gencert -config` and holds
   profiles.
-- `00_ca_csr.json` (required) is used to configure the CA cert/key.
+- `ca_csr.json` (required) is used to configure the CA cert/key.
 - `INSTANCE_PROFILE_csr.json` are CSR configs.
   - INSTANCE is a unique name for a cert/key pair.
   - PROFILE is the profile to use that was specified in `config.json`
@@ -70,7 +70,7 @@ data:
         }
     }
 
-  00_ca_csr.json: |-
+  ca_csr.json: |-
     {
         "CN": "My CA",
         "key": {
@@ -86,13 +86,13 @@ data:
         ]
     }
 
-  00_server_csr.json: |-
+  0_server_csr.json: |-
     {
-        "CN": "db00",
+        "CN": "db0",
         "hosts": [
             "example.net",
             "db.example.net",
-            "db-00.example.net"
+            "db-0.example.net"
         ],
         "key": {
             "algo": "ecdsa",
@@ -107,7 +107,7 @@ data:
         ]
     }
 
-  00_client_csr.json: |-
+  0_client_csr.json: |-
     {
         "CN": "client",
         "key": {
@@ -151,12 +151,12 @@ TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
 
 In this example a `my-certs-example` Secret would be created after the Job
 completes. The data available would be:
-- `00-client-key.pem`
-- `00-client.csr`
-- `00-client.pem`
-- `00-server-key.pem`
-- `00-server.csr`
-- `00-server.pem`
+- `0-client-key.pem`
+- `0-client.csr`
+- `0-client.pem`
+- `0-server-key.pem`
+- `0-server.csr`
+- `0-server.pem`
 - `ca-key.pem`
 - `ca.csr`
 - `ca.pem`
