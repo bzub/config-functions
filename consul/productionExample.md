@@ -53,7 +53,6 @@ EXPECTED='.
 ├── [Resource]  RoleBinding example/my-consul-gossip-encryption
 ├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
 ├── [Resource]  Service example/my-consul-server-dns
-├── [Resource]  ConfigMap example/my-consul-server-tls
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
 ├── [Resource]  StatefulSet example/my-consul-server
@@ -63,6 +62,7 @@ EXPECTED='.
 └── [Resource]  ServiceAccount example/my-consul-tls'
 
 TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
