@@ -79,6 +79,7 @@ metadata:
       container:
         image: gcr.io/config-functions/vault:v0.0.1
 data:
+  generate_tls_enabled: "false"
   init_enabled: "false"
   unseal_enabled: "false"
   unseal_secret_name: "my-vault-example-unseal"'
