@@ -62,7 +62,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: consul
-          image: docker.io/library/consul:1.7.0-beta2
+          image: docker.io/library/consul:1.7.0-beta3
           command:
             - consul
             - agent

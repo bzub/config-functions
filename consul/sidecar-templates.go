@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: consul-agent
-          image: docker.io/library/consul:1.7.0-beta2
+          image: docker.io/library/consul:1.7.0-beta3
           command:
             - consul
             - agent
