@@ -79,6 +79,7 @@ metadata:
       container:
         image: gcr.io/config-functions/vault:v0.0.1
 data:
+  generate_tls_enabled: "false"
   init_enabled: "false"
   unseal_enabled: "false"
   unseal_secret_name: "my-vault-example-unseal"'
@@ -120,36 +121,6 @@ EXPECTED='.
 TEST="$(
 kustomize config grep "kind=Service" $DEMO |\
 kustomize config tree --field="spec.selector" --graph-structure=owners)"
-[ "$TEST" = "$EXPECTED" ]
-```
-
-### Server Configuration
-
-The default configuration for the Vault server is defined in a ConfigMap.
-
-<!-- @verifyDefaultServerConfig @test -->
-```sh
-EXPECTED='apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: my-vault-server
-  namespace: "example"
-  labels:
-    app.kubernetes.io/instance: my-vault
-    app.kubernetes.io/name: vault-server
-data:
-  00-server-listener.hcl: |-
-    listener "tcp" {
-      tls_disable = 1
-      address = "[::]:8200"
-      cluster_address = "[::]:8201"
-    }
-  00-server-storage-backend.hcl: |-
-    storage "file" {
-      path = "/vault/data"
-    }'
-
-TEST="$(cat $DEMO/my-vault-server_configmap.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

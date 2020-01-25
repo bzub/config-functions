@@ -16,21 +16,21 @@ data:
   secret_name: "{{ .Data.SecretName }}"
 `
 
-// functionConfig holds information used in Resource templates.
-type functionConfig struct {
+// FunctionConfig holds information used in Resource templates.
+type FunctionConfig struct {
 	// ObjectMeta contains Resource metadata to use in templates.
 	yaml.ObjectMeta `yaml:"metadata"`
 
-	Data functionData
+	Data FunctionData
 }
 
-type functionData struct {
+type FunctionData struct {
 	// SecretName is the name of the Secret used to hold generated certs
 	// and keys. Defaults to the metadata.name of the function config.
 	SecretName string `yaml:"secret_name"`
 }
 
-func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
+func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 	var key, value string
 	for i := range node.Content {
 		if key == "" {
@@ -39,7 +39,7 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 		}
 		value = node.Content[i].Value
 
-		// Convert KV string values into associated functionData types.
+		// Convert KV string values into associated FunctionData types.
 		switch {
 		case key == "secret_name":
 			d.SecretName = value

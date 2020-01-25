@@ -25,6 +25,7 @@ metadata:
 data:
   init_enabled: "true"
   unseal_enabled: "true"
+  generate_tls_enabled: "true"
 EOF
 ```
 
@@ -45,6 +46,11 @@ EXPECTED='.
 ├── [Resource]  Role example/my-vault-init
 ├── [Resource]  RoleBinding example/my-vault-init
 ├── [Resource]  ServiceAccount example/my-vault-init
+├── [Resource]  ConfigMap example/my-vault-server-cfssl
+├── [Resource]  Job example/my-vault-server-cfssl
+├── [Resource]  Role example/my-vault-server-cfssl
+├── [Resource]  RoleBinding example/my-vault-server-cfssl
+├── [Resource]  ServiceAccount example/my-vault-server-cfssl
 ├── [Resource]  ConfigMap example/my-vault-server
 ├── [Resource]  Service example/my-vault-server
 ├── [Resource]  StatefulSet example/my-vault-server

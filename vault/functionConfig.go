@@ -15,6 +15,7 @@ metadata:
 data:
   init_enabled: "{{ .Data.InitEnabled }}"
   unseal_enabled: "{{ .Data.UnsealEnabled }}"
+  generate_tls_enabled: "{{ .Data.GenerateTLSEnabled }}"
   unseal_secret_name: "{{ .Data.UnsealSecretName }}"
 `
 
@@ -36,6 +37,10 @@ type FunctionData struct {
 	// UnsealEnabled creates a Job which performs "vault operator unseal"
 	// on a Vault cluster.
 	UnsealEnabled bool `yaml:"unseal_enabled"`
+
+	// GenerateTLSEnabled creates Jobs which generate TLS assets for
+	// communication with Vault.
+	GenerateTLSEnabled bool `yaml:"generate_tls_enabled"`
 
 	// UnsealSecretName is the name of the Secret used to hold unseal key
 	// shares.
@@ -59,6 +64,8 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 			d.InitEnabled = true
 		case key == "unseal_enabled" && value == "true":
 			d.UnsealEnabled = true
+		case key == "generate_tls_enabled" && value == "true":
+			d.GenerateTLSEnabled = true
 		case key == "unseal_secret_name":
 			d.UnsealSecretName = value
 		}

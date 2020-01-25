@@ -3,6 +3,7 @@ package vault
 import (
 	"fmt"
 
+	"github.com/bzub/config-functions/cfssl"
 	"github.com/bzub/config-functions/cfunc"
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -43,7 +44,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	generatedRs = append(generatedRs, serverRs...)
 
 	if fnCfg.Data.InitEnabled {
-		// Generate agent TLS Resources from templates.
+		// Generate init Job Resources from templates.
 		initRs, err := cfunc.ParseTemplates(f.initJobTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
@@ -52,12 +53,31 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	if fnCfg.Data.UnsealEnabled {
-		// Generate agent TLS Resources from templates.
+		// Generate unseal Job Resources from templates.
 		unsealRs, err := cfunc.ParseTemplates(f.unsealJobTemplates(), fnCfg)
 		if err != nil {
 			return nil, err
 		}
 		generatedRs = append(generatedRs, unsealRs...)
+	}
+
+	if fnCfg.Data.GenerateTLSEnabled {
+		// Create a cfssl function config from a ConfigMap template.
+		cfsslFnCfg, err := cfunc.ParseTemplate("cfssl-cm", cfsslCMTemplate, fnCfg)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create a cfssl filter.
+		cfsslRW := &kio.ByteReadWriter{FunctionConfig: cfsslFnCfg}
+		cfsslFilter := &cfssl.CfsslFilter{cfsslRW}
+
+		// Run the cfssl filter and use its Resources.
+		cfsslRs, err := cfsslFilter.Filter([]*yaml.RNode{cfsslFnCfg})
+		if err != nil {
+			return nil, err
+		}
+		generatedRs = append(generatedRs, cfsslRs...)
 	}
 
 	// Return the generated resources + patches + input.
