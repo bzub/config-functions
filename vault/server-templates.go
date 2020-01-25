@@ -71,7 +71,7 @@ spec:
               mountPath: /vault/tls
       containers:
         - name: vault-server
-          image: docker.io/library/vault:1.3.1
+          image: docker.io/library/vault:1.3.2
           command:
             - /usr/local/bin/docker-entrypoint.sh
             - vault
