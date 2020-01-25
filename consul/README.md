@@ -1,4 +1,6 @@
 [consul]: https://www.consul.io/
+[FunctionConfig]: https://pkg.go.dev/github.com/bzub/config-functions/consul?tab=doc#FunctionConfig
+[FunctionData]: https://pkg.go.dev/github.com/bzub/config-functions/consul?tab=doc#FunctionData
 
 # Consul Configuration Function
 
@@ -6,9 +8,9 @@ Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 
 ## Function Features
 
-The function ConfigMap and associated types are defined in
-[functionConfig.go](./functionConfig.go). The `functionData` type in that file
-has detailed documentation about all available options.
+The function ConfigMap is defined in the [FunctionConfig][FunctionConfig] Go
+type. The options available to configure the function are documented in the
+[FunctionData][FunctionData] type.
 
 ## Getting Started
 
@@ -48,9 +50,9 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
-├── [Resource]  ConfigMap example/my-consul-server
 ├── [Resource]  Service example/my-consul-server
 └── [Resource]  StatefulSet example/my-consul-server'
 
@@ -71,7 +73,7 @@ EXPECTED='apiVersion: v1
 kind: ConfigMap
 metadata:
   name: my-consul
-  namespace: example
+  namespace: "example"
   labels:
     app.kubernetes.io/instance: my-consul
     app.kubernetes.io/name: consul-server
@@ -85,6 +87,7 @@ data:
   agent_sidecar_injector_enabled: "false"
   agent_tls_ca_secret_name: "my-consul-example-tls-ca"
   agent_tls_cli_secret_name: "my-consul-example-tls-cli"
+  agent_tls_client_secret_name: "my-consul-example-tls-client"
   agent_tls_enabled: "false"
   agent_tls_server_secret_name: "my-consul-example-tls-server"
   gossip_enabled: "false"

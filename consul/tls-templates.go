@@ -7,7 +7,7 @@ func (f *ConsulFilter) tlsTemplates() map[string]string {
 		"tls-role":        tlsRoleTemplate,
 		"tls-rolebinding": tlsRoleBindingTemplate,
 		"tls-sts-patch":   tlsSTSPatchTemplate,
-		"tls-cm-patch":    tlsCMPatchTemplate,
+		"tls-cm-patch":    tlsServerCMTemplate,
 	}
 }
 
@@ -73,25 +73,22 @@ spec:
       volumes:
         - name: tls-secret
           secret:
-            secretName: {{ .Name }}-{{ .Namespace }}-tls-server
+            secretName: {{ .Data.AgentTLSServerSecretName }}
         - name: tls
           emptyDir: {}
 `
 
-var tlsCMPatchTemplate = `apiVersion: v1
+var tlsServerCMTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}-server
+  name: {{ .Name }}-server-tls
   namespace: "{{ .Namespace }}"
 data:
-  00-default-agent-tls.json: |-
+  01-default-agent-tls.json: |-
     {
       "verify_incoming": true,
       "verify_outgoing": true,
       "verify_server_hostname": true,
-      "auto_encrypt": {
-        "allow_tls": true
-      },
       "ca_file": "/consul/tls/consul-agent-ca.pem",
       "cert_file": "/consul/tls/server-consul.pem",
       "key_file": "/consul/tls/server-consul-key.pem",
@@ -117,7 +114,7 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: generate-tls
-          image: docker.io/library/consul:1.6.2
+          image: docker.io/library/consul:1.7.0-beta2
           command:
             - /bin/sh
             - -ec
@@ -126,6 +123,7 @@ spec:
               cd "${tls_dir}"
               consul tls ca create
               consul tls cert create -cli
+              consul tls cert create -client
               for i in $(seq 3); do
                 consul tls cert create -server
               done
@@ -152,6 +150,11 @@ spec:
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
+
+              secret="$(agent_tls_client_secret_name)"
+              kubectl create secret generic "${secret}" \
+                "--from-file=${tls_dir}/dc1-client-consul-0.pem" \
+                "--from-file=${tls_dir}/dc1-client-consul-0-key.pem"
           envFrom:
             - configMapRef:
                 name: {{ .Name }}

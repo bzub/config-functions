@@ -20,19 +20,22 @@ data:
   agent_tls_server_secret_name: "{{ .Data.AgentTLSServerSecretName }}"
   agent_tls_ca_secret_name: "{{ .Data.AgentTLSCASecretName }}"
   agent_tls_cli_secret_name: "{{ .Data.AgentTLSCLISecretName }}"
+  agent_tls_client_secret_name: "{{ .Data.AgentTLSClientSecretName }}"
   gossip_secret_name: "{{ .Data.GossipSecretName }}"
   acl_bootstrap_secret_name: "{{ .Data.ACLBootstrapSecretName }}"
 `
 
-// functionConfig holds information used in Resource templates.
-type functionConfig struct {
+// FunctionConfig holds information used in Resource templates. It is a Go
+// representation of a Kubernetes ConfigMap Resource.
+type FunctionConfig struct {
 	// ObjectMeta contains Resource metadata to use in templates.
 	yaml.ObjectMeta `yaml:"metadata"`
 
-	Data functionData
+	Data FunctionData
 }
 
-type functionData struct {
+// FunctionData holds settings used in the config function.
+type FunctionData struct {
 	// ACLBootstrapEnabled creates a Job (and associated resources) which
 	// executes `consul acl bootstrap` on a new Consul cluster, and stores
 	// the bootstrap token information in a Secret.
@@ -78,12 +81,18 @@ type functionData struct {
 	// Consul CLI TLS assets.
 	AgentTLSCLISecretName string `yaml:"agent_tls_cli_secret_name"`
 
+	// AgentTLSClientSecretName is the name of the Secret used to hold
+	// Consul Client TLS assets.
+	AgentTLSClientSecretName string `yaml:"agent_tls_client_secret_name"`
+
 	// GossipSecretName is the name of the Secret used to hold the Consul
 	// gossip encryption key/config.
 	GossipSecretName string `yaml:"gossip_secret_name"`
 }
 
-func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
+// UnmarshalYAML implements yaml.Unmarshaler. It ensures all values from
+// a ConfigMap's KV data can be converted into relevant Go types.
+func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 	var key, value string
 	for i := range node.Content {
 		if key == "" {
@@ -92,7 +101,7 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 		}
 		value = node.Content[i].Value
 
-		// Convert KV string values into associated functionData types.
+		// Convert KV string values into associated FunctionData types.
 		switch {
 		case key == "agent_tls_enabled" && value == "true":
 			d.AgentTLSEnabled = true
@@ -108,6 +117,8 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 			d.AgentTLSCASecretName = value
 		case key == "agent_tls_cli_secret_name":
 			d.AgentTLSCLISecretName = value
+		case key == "agent_tls_client_secret_name":
+			d.AgentTLSCLISecretName = value
 		case key == "gossip_secret_name":
 			d.GossipSecretName = value
 		case key == "acl_bootstrap_secret_name":
@@ -118,4 +129,16 @@ func (d *functionData) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	return nil
+}
+
+// casiConfig holds information used to patch workload Resources with a sidecar
+// continer.
+type casiConfig struct {
+	// PatchTarget contains Resource metadata from a workload to be
+	// patched.
+	PatchTarget yaml.ResourceMeta
+
+	// FunctionConfig contains information used to configure the Consul
+	// agent sidecar.
+	*FunctionConfig
 }
