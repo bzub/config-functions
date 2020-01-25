@@ -69,15 +69,10 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		}
 
 		// Create a cfssl filter.
-		cfsslRW := &kio.ByteReadWriter{
-			Reader:                f.RW.Reader,
-			Writer:                f.RW.Writer,
-			KeepReaderAnnotations: true,
-			FunctionConfig:        cfsslFnCfg,
-		}
+		cfsslRW := &kio.ByteReadWriter{FunctionConfig: cfsslFnCfg}
 		cfsslFilter := &cfssl.CfsslFilter{cfsslRW}
 
-		// Run the filter and use its Resources.
+		// Run the cfssl filter and use its Resources.
 		cfsslRs, err := cfsslFilter.Filter([]*yaml.RNode{cfsslFnCfg})
 		if err != nil {
 			return nil, err
