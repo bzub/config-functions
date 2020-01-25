@@ -24,7 +24,7 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: generate-gossip-encryption-config
-          image: docker.io/library/consul:1.6.2
+          image: docker.io/library/consul:1.7.0-beta2
           command:
             - /bin/sh
             - -ec

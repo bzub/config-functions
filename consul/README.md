@@ -48,9 +48,9 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
-├── [Resource]  ConfigMap example/my-consul-server
 ├── [Resource]  Service example/my-consul-server
 └── [Resource]  StatefulSet example/my-consul-server'
 
@@ -82,15 +82,16 @@ metadata:
 data:
   acl_bootstrap_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
+  agent_sidecar_injector_enabled: "false"
   agent_tls_ca_secret_name: "my-consul-example-tls-ca"
   agent_tls_cli_secret_name: "my-consul-example-tls-cli"
+  agent_tls_client_secret_name: "my-consul-example-tls-client"
   agent_tls_enabled: "false"
   agent_tls_server_secret_name: "my-consul-example-tls-server"
   gossip_enabled: "false"
   gossip_secret_name: "my-consul-example-gossip"'
 
 TEST="$(cat $DEMO/function-config.yaml)"
-echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

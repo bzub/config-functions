@@ -16,9 +16,11 @@ data:
   agent_tls_enabled: "{{ .Data.AgentTLSEnabled }}"
   gossip_enabled: "{{ .Data.GossipEnabled }}"
   acl_bootstrap_enabled: "{{ .Data.ACLBootstrapEnabled }}"
+  agent_sidecar_injector_enabled: "{{ .Data.AgentSidecarInjectorEnabled }}"
   agent_tls_server_secret_name: "{{ .Data.AgentTLSServerSecretName }}"
   agent_tls_ca_secret_name: "{{ .Data.AgentTLSCASecretName }}"
   agent_tls_cli_secret_name: "{{ .Data.AgentTLSCLISecretName }}"
+  agent_tls_client_secret_name: "{{ .Data.AgentTLSClientSecretName }}"
   gossip_secret_name: "{{ .Data.GossipSecretName }}"
   acl_bootstrap_secret_name: "{{ .Data.ACLBootstrapSecretName }}"
 `
@@ -40,6 +42,14 @@ type FunctionData struct {
 	//
 	// https://learn.hashicorp.com/consul/day-0/acl-guide
 	ACLBootstrapEnabled bool `yaml:"acl_bootstrap_enabled"`
+
+	// AgentSidecarInjectorEnabled adds a Consul Agent sidecar container to
+	// workload configs that contain the
+	// `config.bzub.dev/consul-agent-sidecar-injector` annotation with a
+	// value that targets the desired Consul server instance.
+	//
+	// https://www.consul.io/docs/agent/basics.html
+	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
 	// AgentTLSEnabled creates a Job which populates a Secret with Consul
 	// agent TLS assests, and configures a Consul StatefulSet to use said
@@ -71,6 +81,10 @@ type FunctionData struct {
 	// Consul CLI TLS assets.
 	AgentTLSCLISecretName string `yaml:"agent_tls_cli_secret_name"`
 
+	// AgentTLSClientSecretName is the name of the Secret used to hold
+	// Consul Client TLS assets.
+	AgentTLSClientSecretName string `yaml:"agent_tls_client_secret_name"`
+
 	// GossipSecretName is the name of the Secret used to hold the Consul
 	// gossip encryption key/config.
 	GossipSecretName string `yaml:"gossip_secret_name"`
@@ -95,11 +109,15 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 			d.GossipEnabled = true
 		case key == "acl_bootstrap_enabled" && value == "true":
 			d.ACLBootstrapEnabled = true
+		case key == "agent_sidecar_injector_enabled" && value == "true":
+			d.AgentSidecarInjectorEnabled = true
 		case key == "agent_tls_server_secret_name":
 			d.AgentTLSServerSecretName = value
 		case key == "agent_tls_ca_secret_name":
 			d.AgentTLSCASecretName = value
 		case key == "agent_tls_cli_secret_name":
+			d.AgentTLSCLISecretName = value
+		case key == "agent_tls_client_secret_name":
 			d.AgentTLSCLISecretName = value
 		case key == "gossip_secret_name":
 			d.GossipSecretName = value
@@ -111,4 +129,16 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	return nil
+}
+
+// casiConfig holds information used to patch workload Resources with a sidecar
+// continer.
+type casiConfig struct {
+	// PatchTarget contains Resource metadata from a workload to be
+	// patched.
+	PatchTarget yaml.ResourceMeta
+
+	// FunctionConfig contains information used to configure the Consul
+	// agent sidecar.
+	*FunctionConfig
 }

@@ -13,19 +13,22 @@ func (f *ConsulFilter) serverTemplates() map[string]string {
 var serverCmTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}-server
+  name: {{ .Name }}-{{ .Namespace }}-server
   namespace: "{{ .Namespace }}"
   labels:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
-  00-defaults.hcl: |-
+  00-agent-defaults.hcl: |-
+    datacenter = "dc1"
+    data_dir = "/consul/data"
+  00-acl-defaults.hcl: |-
     acl = {
       enabled = true
       default_policy = "allow"
       enable_token_persistence = true
     }
-
+  00-connect-defaults.hcl: |-
     connect = {
       enabled = true
     }
@@ -59,7 +62,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: consul
-          image: docker.io/library/consul:1.6.2
+          image: docker.io/library/consul:1.7.0-beta2
           command:
             - consul
             - agent
@@ -68,7 +71,6 @@ spec:
             - -bootstrap-expect=$(CONSUL_REPLICAS)
             - -client=0.0.0.0
             - -config-dir=/consul/config
-            - -data-dir=/consul/data
             - -ui
             - -retry-join={{ .Name }}-server.$(NAMESPACE).svc.cluster.local
             - -server
@@ -123,16 +125,11 @@ spec:
           readinessProbe:
             exec:
               command:
-                - "/bin/sh"
-                - "-ec"
+                - /bin/sh
+                - -ec
                 - |
                   curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | \
                   grep -E '".+"'
-            failureThreshold: 2
-            initialDelaySeconds: 5
-            periodSeconds: 3
-            successThreshold: 1
-            timeoutSeconds: 5
       volumes:
         - name: consul-data
           emptyDir: {}
@@ -140,10 +137,14 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: {{ .Name }}-server
+                  name: {{ .Name }}-{{ .Namespace }}-server
 {{ if .Data.GossipEnabled }}
               - secret:
                   name: {{ .Data.GossipSecretName }}
+{{ end }}
+{{ if .Data.AgentTLSEnabled }}
+              - configMap:
+                  name: {{ .Name }}-server-tls
 {{ end }}
 `
 

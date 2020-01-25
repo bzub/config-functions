@@ -69,6 +69,16 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, aclRs...)
 	}
 
+	if fnCfg.Data.AgentSidecarInjectorEnabled {
+		// Generate sidecar patch Resources for workloads that call for
+		// them from input.
+		sidecarRs, err := sidecarPatches(in, fnCfg)
+		if err != nil {
+			return nil, err
+		}
+		generatedRs = append(generatedRs, sidecarRs...)
+	}
+
 	// Return the generated resources + patches + input.
 	return append(generatedRs, in...), nil
 }
@@ -91,6 +101,7 @@ func (f *ConsulFilter) FunctionConfig() (*FunctionConfig, error) {
 		AgentTLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
 		AgentTLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
 		AgentTLSCLISecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
+		AgentTLSClientSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
 		GossipSecretName:         fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
 		ACLBootstrapSecretName:   fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
 	}
