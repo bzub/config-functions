@@ -99,8 +99,8 @@ TEST="$(cat $DEMO/function-config.yaml)"
 
 ### Metadata
 
-The following information from the function config are applied to all Resource configs the function
-manages/generates:
+The following information from the function config are applied to all Resource
+configs the function manages/generates:
 - `metadata.name` - Used as a prefix for Resource names.
 - `metadata.namespace`
 
