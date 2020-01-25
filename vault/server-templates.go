@@ -83,7 +83,7 @@ spec:
           env:
             - name: VAULT_ADDR
               value: https://127.0.0.1:8200
-              name: VAULT_CACERT
+            - name: VAULT_CACERT
               value: /vault/tls/ca.pem
           lifecycle:
             preStop:
