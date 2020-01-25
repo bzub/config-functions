@@ -42,7 +42,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 	generatedRs = append(generatedRs, serverRs...)
 
-	if fnCfg.Data.GossipEnabled {
+	if fnCfg.Data.GossipKeyGeneratorJobEnabled {
 		// Generate gossip Resouces from templates.
 		gossipRs, err := cfunc.ParseTemplates(f.gossipTemplates(), fnCfg)
 		if err != nil {
@@ -51,7 +51,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, gossipRs...)
 	}
 
-	if fnCfg.Data.AgentTLSEnabled {
+	if fnCfg.Data.TLSGeneratorJobEnabled {
 		// Generate agent TLS Resources from templates.
 		tlsRs, err := cfunc.ParseTemplates(f.tlsTemplates(), fnCfg)
 		if err != nil {
@@ -60,7 +60,7 @@ func (f *ConsulFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, tlsRs...)
 	}
 
-	if fnCfg.Data.ACLBootstrapEnabled {
+	if fnCfg.Data.ACLBootstrapJobEnabled {
 		// Generate ACL bootstrap Resources from templates.
 		aclRs, err := cfunc.ParseTemplates(f.aclJobTemplates(), fnCfg)
 		if err != nil {
@@ -98,12 +98,12 @@ func (f *ConsulFilter) FunctionConfig() (*FunctionConfig, error) {
 	// Set defaults.
 	fnCfg := FunctionConfig{}
 	fnCfg.Data = FunctionData{
-		AgentTLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
-		AgentTLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
-		AgentTLSCLISecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
-		AgentTLSClientSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
-		GossipSecretName:         fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
-		ACLBootstrapSecretName:   fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
+		ACLBootstrapSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-acl",
+		TLSServerSecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
+		TLSCASecretName:        fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
+		TLSCLISecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
+		TLSClientSecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
+		GossipSecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
 	}
 
 	// Populate function data from config.

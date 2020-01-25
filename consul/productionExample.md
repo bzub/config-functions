@@ -24,9 +24,9 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  agent_tls_enabled: "true"
-  gossip_enabled: "true"
-  acl_bootstrap_enabled: "true"
+  acl_bootstrap_job_enabled: "true"
+  tls_generator_job_enabled: "true"
+  gossip_key_generator_job_enabled: "true"
 EOF
 ```
 

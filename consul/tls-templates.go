@@ -73,7 +73,7 @@ spec:
       volumes:
         - name: tls-secret
           secret:
-            secretName: {{ .Data.AgentTLSServerSecretName }}
+            secretName: {{ .Data.TLSServerSecretName }}
         - name: tls
           emptyDir: {}
 `
@@ -139,19 +139,19 @@ spec:
             - |-
               tls_dir="/tls/generated"
 
-              secret="$(agent_tls_server_secret_name)"
+              secret="$(tls_server_secret_name)"
               kubectl create secret generic "${secret}" "--from-file=${tls_dir}"
 
-              secret="$(agent_tls_ca_secret_name)"
+              secret="$(tls_ca_secret_name)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/consul-agent-ca.pem"
 
-              secret="$(agent_tls_cli_secret_name)"
+              secret="$(tls_cli_secret_name)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-cli-consul-0-key.pem"
 
-              secret="$(agent_tls_client_secret_name)"
+              secret="$(tls_client_secret_name)"
               kubectl create secret generic "${secret}" \
                 "--from-file=${tls_dir}/dc1-client-consul-0.pem" \
                 "--from-file=${tls_dir}/dc1-client-consul-0-key.pem"

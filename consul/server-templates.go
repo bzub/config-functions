@@ -138,11 +138,11 @@ spec:
             sources:
               - configMap:
                   name: {{ .Name }}-{{ .Namespace }}-server
-{{ if .Data.GossipEnabled }}
+{{ if .Data.GossipKeyGeneratorJobEnabled }}
               - secret:
                   name: {{ .Data.GossipSecretName }}
 {{ end }}
-{{ if .Data.AgentTLSEnabled }}
+{{ if .Data.TLSGeneratorJobEnabled }}
               - configMap:
                   name: {{ .Name }}-server-tls
 {{ end }}

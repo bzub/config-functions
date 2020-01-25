@@ -68,7 +68,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 		}
 		patches = append(patches, scPatch)
 
-		if fnCfg.Data.AgentTLSEnabled {
+		if fnCfg.Data.TLSGeneratorJobEnabled {
 			// Create a ConfigMap to configure Consul agent TLS.
 			sidecarTLSCM, err := cfunc.ParseTemplate(
 				"sidecar-tls-cm", sidecarTLSCMTemplate, patchCfg,
@@ -101,7 +101,7 @@ spec:
             - -config-dir=/consul/configs
             - -retry-join={{ .Name }}-server.{{ .Namespace }}.svc.cluster.local
           env:
-{{ if .Data.AgentTLSEnabled }}
+{{ if .Data.TLSGeneratorJobEnabled }}
             - name: CONSUL_HTTP_ADDR
               value: https://127.0.0.1:8501
             - name: CONSUL_CACERT
@@ -120,7 +120,7 @@ spec:
                 - /bin/sh
                 - -ec
                 - |
-{{ if .Data.AgentTLSEnabled }}
+{{ if .Data.TLSGeneratorJobEnabled }}
                   curl \
                     --cacert $(CONSUL_CACERT) \
                     --cert $(CONSUL_CLIENT_CERT) \
@@ -136,7 +136,7 @@ spec:
               mountPath: /consul/data
             - name: consul-configs
               mountPath: /consul/configs
-{{ if .Data.AgentTLSEnabled }}
+{{ if .Data.TLSGeneratorJobEnabled }}
             - name: consul-tls-secret
               mountPath: /consul/tls
 {{ end }}
@@ -151,22 +151,22 @@ spec:
                   items:
                     - key: 00-agent-defaults.hcl
                       path: 00-agent-defaults.hcl
-{{ if .Data.GossipEnabled }}
+{{ if .Data.GossipKeyGeneratorJobEnabled }}
               - secret:
                   name: {{ .Data.GossipSecretName }}
 {{ end }}
-{{ if .Data.AgentTLSEnabled }}
+{{ if .Data.TLSGeneratorJobEnabled }}
               - configMap:
                   name: {{ .Name }}-{{ .Namespace }}-tls
         - name: consul-tls-secret
           projected:
             sources:
               - secret:
-                  name: {{ .Data.AgentTLSCASecretName }}
+                  name: {{ .Data.TLSCASecretName }}
               - secret:
-                  name: {{ .Data.AgentTLSCLISecretName }}
+                  name: {{ .Data.TLSCLISecretName }}
               - secret:
-                  name: {{ .Data.AgentTLSClientSecretName }}
+                  name: {{ .Data.TLSClientSecretName }}
 {{ end }}
 `
 

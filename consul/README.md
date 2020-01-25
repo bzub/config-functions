@@ -82,16 +82,16 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  acl_bootstrap_enabled: "false"
+  acl_bootstrap_job_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
   agent_sidecar_injector_enabled: "false"
-  agent_tls_ca_secret_name: "my-consul-example-tls-ca"
-  agent_tls_cli_secret_name: "my-consul-example-tls-cli"
-  agent_tls_client_secret_name: "my-consul-example-tls-client"
-  agent_tls_enabled: "false"
-  agent_tls_server_secret_name: "my-consul-example-tls-server"
-  gossip_enabled: "false"
-  gossip_secret_name: "my-consul-example-gossip"'
+  gossip_key_generator_job_enabled: "false"
+  gossip_secret_name: "my-consul-example-gossip"
+  tls_ca_secret_name: "my-consul-example-tls-ca"
+  tls_cli_secret_name: "my-consul-example-tls-cli"
+  tls_client_secret_name: "my-consul-example-tls-client"
+  tls_generator_job_enabled: "false"
+  tls_server_secret_name: "my-consul-example-tls-server"'
 
 TEST="$(cat $DEMO/function-config.yaml)"
 [ "$TEST" = "$EXPECTED" ]

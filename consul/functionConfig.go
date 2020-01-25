@@ -13,16 +13,16 @@ metadata:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
-  agent_tls_enabled: "{{ .Data.AgentTLSEnabled }}"
-  gossip_enabled: "{{ .Data.GossipEnabled }}"
-  acl_bootstrap_enabled: "{{ .Data.ACLBootstrapEnabled }}"
+  acl_bootstrap_job_enabled: "{{ .Data.ACLBootstrapJobEnabled }}"
   agent_sidecar_injector_enabled: "{{ .Data.AgentSidecarInjectorEnabled }}"
-  agent_tls_server_secret_name: "{{ .Data.AgentTLSServerSecretName }}"
-  agent_tls_ca_secret_name: "{{ .Data.AgentTLSCASecretName }}"
-  agent_tls_cli_secret_name: "{{ .Data.AgentTLSCLISecretName }}"
-  agent_tls_client_secret_name: "{{ .Data.AgentTLSClientSecretName }}"
-  gossip_secret_name: "{{ .Data.GossipSecretName }}"
+  tls_generator_job_enabled: "{{ .Data.TLSGeneratorJobEnabled }}"
+  gossip_key_generator_job_enabled: "{{ .Data.GossipKeyGeneratorJobEnabled }}"
   acl_bootstrap_secret_name: "{{ .Data.ACLBootstrapSecretName }}"
+  tls_server_secret_name: "{{ .Data.TLSServerSecretName }}"
+  tls_ca_secret_name: "{{ .Data.TLSCASecretName }}"
+  tls_cli_secret_name: "{{ .Data.TLSCLISecretName }}"
+  tls_client_secret_name: "{{ .Data.TLSClientSecretName }}"
+  gossip_secret_name: "{{ .Data.GossipSecretName }}"
 `
 
 // FunctionConfig holds information used in Resource templates. It is a Go
@@ -36,12 +36,12 @@ type FunctionConfig struct {
 
 // FunctionData holds settings used in the config function.
 type FunctionData struct {
-	// ACLBootstrapEnabled creates a Job (and associated resources) which
-	// executes `consul acl bootstrap` on a new Consul cluster, and stores
-	// the bootstrap token information in a Secret.
+	// ACLBootstrapJobEnabled creates a Job (and associated resources)
+	// which executes `consul acl bootstrap` on a new Consul cluster, and
+	// stores the bootstrap token information in a Secret.
 	//
 	// https://learn.hashicorp.com/consul/day-0/acl-guide
-	ACLBootstrapEnabled bool `yaml:"acl_bootstrap_enabled"`
+	ACLBootstrapJobEnabled bool `yaml:"acl_bootstrap_job_enabled"`
 
 	// AgentSidecarInjectorEnabled adds a Consul Agent sidecar container to
 	// workload configs that contain the
@@ -51,39 +51,39 @@ type FunctionData struct {
 	// https://www.consul.io/docs/agent/basics.html
 	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
-	// AgentTLSEnabled creates a Job which populates a Secret with Consul
-	// agent TLS assests, and configures a Consul StatefulSet to use said
-	// Secret.
+	// TLSGeneratorJobEnabled creates a Job which populates a Secret with
+	// Consul agent TLS assests, and configures a Consul StatefulSet to use
+	// said Secret.
 	//
 	// https://learn.hashicorp.com/consul/security-networking/certificates
-	AgentTLSEnabled bool `yaml:"agent_tls_enabled"`
+	TLSGeneratorJobEnabled bool `yaml:"tls_generator_job_enabled"`
 
-	// GossipEnabled creates a Job which creates a Consul gossip encryption
-	// key Secret, and configures a Consul StatefulSet to use said
-	// key/Secret.
+	// GossipKeyGeneratorJobEnabled creates a Job which creates a Consul
+	// gossip encryption key Secret, and configures a Consul StatefulSet to
+	// use said key/Secret.
 	//
 	// https://learn.hashicorp.com/consul/security-networking/agent-encryption
-	GossipEnabled bool `yaml:"gossip_enabled"`
+	GossipKeyGeneratorJobEnabled bool `yaml:"gossip_key_generator_job_enabled"`
 
 	// ACLBootstrapSecretName is the name of the Secret used to hold Consul
 	// cluster ACL bootstrap information.
 	ACLBootstrapSecretName string `yaml:"acl_bootstrap_secret_name"`
 
-	// AgentTLSServerSecretName is the name of the Secret used to hold
-	// Consul server TLS assets.
-	AgentTLSServerSecretName string `yaml:"agent_tls_server_secret_name"`
+	// TLSServerSecretName is the name of the Secret used to hold Consul
+	// server TLS assets.
+	TLSServerSecretName string `yaml:"tls_server_secret_name"`
 
-	// AgentTLSCASecretName is the name of the Secret used to hold
-	// Consul CA certificates.
-	AgentTLSCASecretName string `yaml:"agent_tls_ca_secret_name"`
+	// TLSCASecretName is the name of the Secret used to hold Consul CA
+	// certificates.
+	TLSCASecretName string `yaml:"tls_ca_secret_name"`
 
-	// AgentTLSCLISecretName is the name of the Secret used to hold
-	// Consul CLI TLS assets.
-	AgentTLSCLISecretName string `yaml:"agent_tls_cli_secret_name"`
+	// TLSCLISecretName is the name of the Secret used to hold Consul CLI
+	// TLS assets.
+	TLSCLISecretName string `yaml:"tls_cli_secret_name"`
 
-	// AgentTLSClientSecretName is the name of the Secret used to hold
-	// Consul Client TLS assets.
-	AgentTLSClientSecretName string `yaml:"agent_tls_client_secret_name"`
+	// TLSClientSecretName is the name of the Secret used to hold Consul
+	// Client TLS assets.
+	TLSClientSecretName string `yaml:"tls_client_secret_name"`
 
 	// GossipSecretName is the name of the Secret used to hold the Consul
 	// gossip encryption key/config.
@@ -103,26 +103,26 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 
 		// Convert KV string values into associated FunctionData types.
 		switch {
-		case key == "agent_tls_enabled" && value == "true":
-			d.AgentTLSEnabled = true
-		case key == "gossip_enabled" && value == "true":
-			d.GossipEnabled = true
-		case key == "acl_bootstrap_enabled" && value == "true":
-			d.ACLBootstrapEnabled = true
+		case key == "acl_bootstrap_job_enabled" && value == "true":
+			d.ACLBootstrapJobEnabled = true
 		case key == "agent_sidecar_injector_enabled" && value == "true":
 			d.AgentSidecarInjectorEnabled = true
-		case key == "agent_tls_server_secret_name":
-			d.AgentTLSServerSecretName = value
-		case key == "agent_tls_ca_secret_name":
-			d.AgentTLSCASecretName = value
-		case key == "agent_tls_cli_secret_name":
-			d.AgentTLSCLISecretName = value
-		case key == "agent_tls_client_secret_name":
-			d.AgentTLSCLISecretName = value
-		case key == "gossip_secret_name":
-			d.GossipSecretName = value
+		case key == "tls_generator_job_enabled" && value == "true":
+			d.TLSGeneratorJobEnabled = true
+		case key == "gossip_key_generator_job_enabled" && value == "true":
+			d.GossipKeyGeneratorJobEnabled = true
 		case key == "acl_bootstrap_secret_name":
 			d.ACLBootstrapSecretName = value
+		case key == "tls_server_secret_name":
+			d.TLSServerSecretName = value
+		case key == "tls_ca_secret_name":
+			d.TLSCASecretName = value
+		case key == "tls_cli_secret_name":
+			d.TLSCLISecretName = value
+		case key == "tls_client_secret_name":
+			d.TLSClientSecretName = value
+		case key == "gossip_secret_name":
+			d.GossipSecretName = value
 		}
 
 		key = ""
