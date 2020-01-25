@@ -1,4 +1,6 @@
 [consul]: https://www.consul.io/
+[FunctionConfig]: https://pkg.go.dev/github.com/bzub/config-functions/consul?tab=doc#FunctionConfig
+[FunctionData]: https://pkg.go.dev/github.com/bzub/config-functions/consul?tab=doc#FunctionData
 
 # Consul Configuration Function
 
@@ -6,9 +8,9 @@ Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 
 ## Function Features
 
-The function ConfigMap and associated types are defined in
-[functionConfig.go](./functionConfig.go). The `functionData` type in that file
-has detailed documentation about all available options.
+The function ConfigMap is defined in the [FunctionConfig][FunctionConfig] Go
+type. The options available to configure the function are documented in the
+[FunctionData][FunctionData] type.
 
 ## Getting Started
 
