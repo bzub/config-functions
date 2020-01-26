@@ -42,7 +42,7 @@ spec:
               name: tls-generated
       containers:
         - name: create-tls-secret
-          image: k8s.gcr.io/hyperkube:v1.17.1
+          image: k8s.gcr.io/hyperkube:v1.17.2
           command:
             - /bin/sh
             - -ec
