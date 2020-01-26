@@ -2,6 +2,7 @@ package consul
 
 func (f *ConsulFilter) serverTemplates() map[string]string {
 	return map[string]string{
+		"agent-cm":       agentCmTemplate,
 		"server-cm":      serverCmTemplate,
 		"server-sts":     serverStsTemplate,
 		"server-svc":     serverSvcTemplate,
@@ -10,10 +11,10 @@ func (f *ConsulFilter) serverTemplates() map[string]string {
 	}
 }
 
-var serverCmTemplate = `apiVersion: v1
+var agentCmTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}-{{ .Namespace }}-server
+  name: {{ .Name }}-{{ .Namespace }}-agent
   namespace: "{{ .Namespace }}"
   labels:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
@@ -29,6 +30,17 @@ data:
       http = -1
       https = 8500
     }
+`
+
+var serverCmTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Name }}-{{ .Namespace }}-server
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
+data:
   00-acl-defaults.hcl: |-
     acl = {
       enabled = true
@@ -181,6 +193,8 @@ spec:
         - name: consul-configs
           projected:
             sources:
+              - configMap:
+                  name: {{ .Name }}-{{ .Namespace }}-agent
               - configMap:
                   name: {{ .Name }}-{{ .Namespace }}-server
               - secret:

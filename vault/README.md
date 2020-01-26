@@ -15,7 +15,7 @@ type. The options available to configure the function are documented in the
 ## Getting Started
 
 In the following example we create Resource configs for a basic, no-frills
-Vault server. For production deployments, check out the [production
+Consul server. For production deployments, check out the [production
 demo](./productionExample.md).
 
 Set up a workspace and define a function configuration.

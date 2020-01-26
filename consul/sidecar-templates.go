@@ -135,14 +135,11 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: {{ .Name }}-{{ .Namespace }}-server
-                  items:
-                    - key: 00-agent-defaults.hcl
-                      path: 00-agent-defaults.hcl
+                  name: {{ .Name }}-{{ .Namespace }}-agent
               - secret:
                   name: {{ .Data.GossipSecretName }}
               - configMap:
-                  name: {{ .Name }}-{{ .Namespace }}-tls
+                  name: {{ .Name }}-{{ .Namespace }}-client-tls
         - name: consul-tls-secret
           projected:
             sources:
@@ -157,7 +154,7 @@ spec:
 var sidecarTLSCMTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}-{{ .Namespace }}-tls
+  name: {{ .Name }}-{{ .Namespace }}-client-tls
   namespace: {{ .PatchTarget.Namespace }}
 data:
   00-agent-tls.hcl: |-

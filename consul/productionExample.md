@@ -47,6 +47,7 @@ EXPECTED='.
 ├── [Resource]  Role example/my-consul-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
 ├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Job example/my-consul-gossip-encryption
 ├── [Resource]  Role example/my-consul-gossip-encryption
@@ -62,7 +63,6 @@ EXPECTED='.
 └── [Resource]  ServiceAccount example/my-consul-tls'
 
 TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
-echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

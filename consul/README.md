@@ -15,8 +15,7 @@ type. The options available to configure the function are documented in the
 ## Getting Started
 
 In the following example we create Resource configs for a basic, no-frills
-Consul server. For production deployments, check out [Function
-Features](#function-features) and the [production
+Consul server. For production deployments, check out the [production
 demo](./productionExample.md).
 
 Set up a workspace and define a function configuration.
@@ -50,6 +49,7 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
@@ -57,6 +57,7 @@ EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
+echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
