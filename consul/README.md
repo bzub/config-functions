@@ -8,7 +8,7 @@ Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 
 ## Function Features
 
-The function ConfigMap is defined in the [FunctionConfig][FunctionConfig] Go
+The function metadata is documented in the [FunctionConfig][FunctionConfig] Go
 type. The options available to configure the function are documented in the
 [FunctionData][FunctionData] type.
 
@@ -94,46 +94,6 @@ data:
   tls_server_secret_name: "my-consul-example-tls-server"'
 
 TEST="$(cat $DEMO/function-config.yaml)"
-[ "$TEST" = "$EXPECTED" ]
-```
-
-### Metadata
-
-The following information from the function config are applied to all Resource
-configs the function manages/generates:
-- `metadata.name` - Used as a prefix for Resource names.
-- `metadata.namespace`
-
-In addition, the function sets the following labels on Resource configs:
-- `app.kubernetes.io/name` - Defaults to `consul-server`
-- `app.kubernetes.io/instance` - Defaults to the function config's `metadata.name`
-
-<!-- @verifyStatefulSetMetadata @test -->
-```sh
-EXPECTED='.
-└── [Resource]  StatefulSet example/my-consul-server
-    ├── metadata.labels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-    └── spec.selector: {matchLabels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}}'
-
-TEST="$(
-kustomize config grep "kind=StatefulSet" $DEMO |\
-kustomize config tree --field="metadata.labels" --field="spec.selector" --graph-structure=owners)"
-[ "$TEST" = "$EXPECTED" ]
-```
-
-<!-- @verifyServiceMetadata @test -->
-```sh
-EXPECTED='.
-├── [Resource]  Service example/my-consul-server-dns
-│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-├── [Resource]  Service example/my-consul-server-ui
-│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-└── [Resource]  Service example/my-consul-server
-    └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}'
-
-TEST="$(
-kustomize config grep "kind=Service" $DEMO |\
-kustomize config tree --field="spec.selector" --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
