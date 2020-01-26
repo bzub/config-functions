@@ -57,7 +57,6 @@ EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
-echo "${TEST}"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

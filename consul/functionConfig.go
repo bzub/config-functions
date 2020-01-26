@@ -47,9 +47,9 @@ type FunctionConfig struct {
 
 // FunctionData holds settings used in the config function.
 type FunctionData struct {
-	// ACLBootstrapJobEnabled creates a Job (and associated resources)
-	// which executes `consul acl bootstrap` on a new Consul cluster, and
-	// stores the bootstrap token information in a Secret.
+	// ACLBootstrapJobEnabled creates a Job which executes `consul acl
+	// bootstrap` on a new Consul cluster, and stores the bootstrap token
+	// information in a Secret.
 	//
 	// https://learn.hashicorp.com/consul/day-0/acl-guide
 	ACLBootstrapJobEnabled bool `yaml:"acl_bootstrap_job_enabled"`
@@ -62,16 +62,14 @@ type FunctionData struct {
 	// https://www.consul.io/docs/agent/basics.html
 	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
-	// TLSGeneratorJobEnabled creates a Job which populates a Secret with
-	// Consul agent TLS assests, and configures a Consul StatefulSet to use
-	// said Secret.
+	// TLSGeneratorJobEnabled creates a Job which generates TLS assets for
+	// Consul communication, and stores them in Secrets.
 	//
 	// https://learn.hashicorp.com/consul/security-networking/certificates
 	TLSGeneratorJobEnabled bool `yaml:"tls_generator_job_enabled"`
 
-	// GossipKeyGeneratorJobEnabled creates a Job which creates a Consul
-	// gossip encryption key Secret, and configures a Consul StatefulSet to
-	// use said key/Secret.
+	// GossipKeyGeneratorJobEnabled creates a Job which generates a Consul
+	// gossip encryption key Secret.
 	//
 	// https://learn.hashicorp.com/consul/security-networking/agent-encryption
 	GossipKeyGeneratorJobEnabled bool `yaml:"gossip_key_generator_job_enabled"`

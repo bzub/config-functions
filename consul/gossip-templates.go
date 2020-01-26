@@ -29,13 +29,12 @@ spec:
             - /bin/sh
             - -ec
             - |-
-              config_file=/config/generated/01-gossip-encryption.json
+              config_file=/config/generated/00-gossip-encryption.hcl
               cat <<EOF > "${config_file}"
-              {
-                "encrypt": "$(consul keygen)",
-                "encrypt_verify_incoming": true,
-                "encrypt_verify_outgoing": true
-              }
+              encrypt = "$(consul keygen)"
+              encrypt_verify_incoming = true
+              encrypt_verify_outgoing = true
+              EOF
           volumeMounts:
             - mountPath: /config/generated
               name: config-generated
