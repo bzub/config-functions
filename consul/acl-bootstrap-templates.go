@@ -24,7 +24,7 @@ spec:
       restartPolicy: OnFailure
       containers:
         - name: consul-acl-bootstrap
-          image: k8s.gcr.io/hyperkube:v1.17.1
+          image: k8s.gcr.io/hyperkube:v1.17.2
           command:
             - /bin/sh
             - -ec

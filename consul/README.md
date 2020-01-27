@@ -8,16 +8,16 @@ Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 
 ## Function Features
 
-The function ConfigMap is defined in the [FunctionConfig][FunctionConfig] Go
+The function metadata is documented in the [FunctionConfig][FunctionConfig] Go
 type. The options available to configure the function are documented in the
 [FunctionData][FunctionData] type.
 
 ## Getting Started
 
-In the following example we create Resource configs for a basic, no-frills
-Consul server. For production deployments, check out [Function
-Features](#function-features) and the [production
-demo](./productionExample.md).
+In the following example we create Resource configs for a Consul server. These
+configs are meant to be checked into version control, so Secrets are not
+included. Optionally, all necessary Secrets can be created in-cluster via Jobs
+-- check out the [production demo](./productionExample.md).
 
 Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
@@ -50,6 +50,7 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
@@ -82,58 +83,18 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  acl_bootstrap_enabled: "false"
+  acl_bootstrap_job_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
   agent_sidecar_injector_enabled: "false"
-  agent_tls_ca_secret_name: "my-consul-example-tls-ca"
-  agent_tls_cli_secret_name: "my-consul-example-tls-cli"
-  agent_tls_client_secret_name: "my-consul-example-tls-client"
-  agent_tls_enabled: "false"
-  agent_tls_server_secret_name: "my-consul-example-tls-server"
-  gossip_enabled: "false"
-  gossip_secret_name: "my-consul-example-gossip"'
+  gossip_key_generator_job_enabled: "false"
+  gossip_secret_name: "my-consul-example-gossip"
+  tls_ca_secret_name: "my-consul-example-tls-ca"
+  tls_cli_secret_name: "my-consul-example-tls-cli"
+  tls_client_secret_name: "my-consul-example-tls-client"
+  tls_generator_job_enabled: "false"
+  tls_server_secret_name: "my-consul-example-tls-server"'
 
 TEST="$(cat $DEMO/function-config.yaml)"
-[ "$TEST" = "$EXPECTED" ]
-```
-
-### Metadata
-
-The following information from the function config are applied to all Resource
-configs the function manages/generates:
-- `metadata.name` - Used as a prefix for Resource names.
-- `metadata.namespace`
-
-In addition, the function sets the following labels on Resource configs:
-- `app.kubernetes.io/name` - Defaults to `consul-server`
-- `app.kubernetes.io/instance` - Defaults to the function config's `metadata.name`
-
-<!-- @verifyStatefulSetMetadata @test -->
-```sh
-EXPECTED='.
-└── [Resource]  StatefulSet example/my-consul-server
-    ├── metadata.labels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-    └── spec.selector: {matchLabels: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}}'
-
-TEST="$(
-kustomize config grep "kind=StatefulSet" $DEMO |\
-kustomize config tree --field="metadata.labels" --field="spec.selector" --graph-structure=owners)"
-[ "$TEST" = "$EXPECTED" ]
-```
-
-<!-- @verifyServiceMetadata @test -->
-```sh
-EXPECTED='.
-├── [Resource]  Service example/my-consul-server-dns
-│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-├── [Resource]  Service example/my-consul-server-ui
-│   └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}
-└── [Resource]  Service example/my-consul-server
-    └── spec.selector: {app.kubernetes.io/instance: my-consul, app.kubernetes.io/name: consul-server}'
-
-TEST="$(
-kustomize config grep "kind=Service" $DEMO |\
-kustomize config tree --field="spec.selector" --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

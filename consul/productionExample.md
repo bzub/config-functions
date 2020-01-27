@@ -4,7 +4,7 @@
 
 Creates Resource configs to deploy [Consul][consul] on Kubernetes, using the
 [more advanced features](./README.md#function-features) of the Consul config
-function.
+function. All Secrets necessary are generated in-cluster via Jobs.
 
 ## Getting Started
 
@@ -24,9 +24,9 @@ metadata:
       container:
         image: gcr.io/config-functions/consul:v0.0.3
 data:
-  agent_tls_enabled: "true"
-  gossip_enabled: "true"
-  acl_bootstrap_enabled: "true"
+  acl_bootstrap_job_enabled: "true"
+  tls_generator_job_enabled: "true"
+  gossip_key_generator_job_enabled: "true"
 EOF
 ```
 
@@ -47,13 +47,13 @@ EXPECTED='.
 ├── [Resource]  Role example/my-consul-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
 ├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Job example/my-consul-gossip-encryption
 ├── [Resource]  Role example/my-consul-gossip-encryption
 ├── [Resource]  RoleBinding example/my-consul-gossip-encryption
 ├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
 ├── [Resource]  Service example/my-consul-server-dns
-├── [Resource]  ConfigMap example/my-consul-server-tls
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
 ├── [Resource]  StatefulSet example/my-consul-server

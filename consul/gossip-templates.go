@@ -24,24 +24,23 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: generate-gossip-encryption-config
-          image: docker.io/library/consul:1.7.0-beta2
+          image: docker.io/library/consul:1.7.0-beta3
           command:
             - /bin/sh
             - -ec
             - |-
-              config_file=/config/generated/01-gossip-encryption.json
+              config_file=/config/generated/00-gossip-encryption.hcl
               cat <<EOF > "${config_file}"
-              {
-                "encrypt": "$(consul keygen)",
-                "encrypt_verify_incoming": true,
-                "encrypt_verify_outgoing": true
-              }
+              encrypt = "$(consul keygen)"
+              encrypt_verify_incoming = true
+              encrypt_verify_outgoing = true
+              EOF
           volumeMounts:
             - mountPath: /config/generated
               name: config-generated
       containers:
         - name: create-gossip-encryption-config-secret
-          image: k8s.gcr.io/hyperkube:v1.17.1
+          image: k8s.gcr.io/hyperkube:v1.17.2
           command:
             - /bin/sh
             - -ec

@@ -2,8 +2,9 @@
 
 # Vault Configuration Function Production Example
 
-Creates Resource configs to deploy [Vault][vault] on Kubernetes, using the more
-advanced features of the Vault config function.
+Creates Resource configs to deploy [Vault][vault] on Kubernetes, using the
+[more advanced features](./README.md#function-features) of the Consul config
+function. All Secrets necessary are generated in-cluster via Jobs.
 
 ## Getting Started
 
@@ -23,9 +24,9 @@ metadata:
       container:
         image: gcr.io/config-functions/vault:v0.0.1
 data:
-  init_enabled: "true"
-  unseal_enabled: "true"
-  generate_tls_enabled: "true"
+  init_job_enabled: "true"
+  unseal_job_enabled: "true"
+  tls_generator_job_enabled: "true"
 EOF
 ```
 

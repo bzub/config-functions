@@ -68,7 +68,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 		}
 		patches = append(patches, scPatch)
 
-		if fnCfg.Data.AgentTLSEnabled {
+		if fnCfg.Data.TLSGeneratorJobEnabled {
 			// Create a ConfigMap to configure Consul agent TLS.
 			sidecarTLSCM, err := cfunc.ParseTemplate(
 				"sidecar-tls-cm", sidecarTLSCMTemplate, patchCfg,
@@ -93,7 +93,7 @@ spec:
     spec:
       containers:
         - name: consul-agent
-          image: docker.io/library/consul:1.7.0-beta2
+          image: docker.io/library/consul:1.7.0-beta3
           command:
             - consul
             - agent
@@ -101,45 +101,33 @@ spec:
             - -config-dir=/consul/configs
             - -retry-join={{ .Name }}-server.{{ .Namespace }}.svc.cluster.local
           env:
-{{ if .Data.AgentTLSEnabled }}
             - name: CONSUL_HTTP_ADDR
-              value: https://127.0.0.1:8501
+              value: https://127.0.0.1:8500
             - name: CONSUL_CACERT
               value: /consul/tls/consul-agent-ca.pem
             - name: CONSUL_CLIENT_CERT
               value: /consul/tls/dc1-cli-consul-0.pem
             - name: CONSUL_CLIENT_KEY
               value: /consul/tls/dc1-cli-consul-0-key.pem
-{{ else }}
-            - name: CONSUL_HTTP_ADDR
-              value: http://127.0.0.1:8500
-{{ end }}
           readinessProbe:
             exec:
               command:
                 - /bin/sh
                 - -ec
                 - |
-{{ if .Data.AgentTLSEnabled }}
                   curl \
                     --cacert $(CONSUL_CACERT) \
                     --cert $(CONSUL_CLIENT_CERT) \
                     --key $(CONSUL_CLIENT_KEY) \
                     $(CONSUL_HTTP_ADDR)/v1/status/leader 2>/dev/null |\
                   grep -E '".+"'
-{{ else }}
-                  curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | \
-                  grep -E '".+"'
-{{ end }}
           volumeMounts:
             - name: consul-data
               mountPath: /consul/data
             - name: consul-configs
               mountPath: /consul/configs
-{{ if .Data.AgentTLSEnabled }}
             - name: consul-tls-secret
               mountPath: /consul/tls
-{{ end }}
       volumes:
         - name: consul-data
           emptyDir: {}
@@ -147,45 +135,29 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: {{ .Name }}-{{ .Namespace }}-server
-                  items:
-                    - key: 00-agent-defaults.hcl
-                      path: 00-agent-defaults.hcl
-{{ if .Data.GossipEnabled }}
+                  name: {{ .Name }}-{{ .Namespace }}-agent
               - secret:
                   name: {{ .Data.GossipSecretName }}
-{{ end }}
-{{ if .Data.AgentTLSEnabled }}
               - configMap:
-                  name: {{ .Name }}-{{ .Namespace }}-tls
+                  name: {{ .Name }}-{{ .Namespace }}-client-tls
         - name: consul-tls-secret
           projected:
             sources:
               - secret:
-                  name: {{ .Data.AgentTLSCASecretName }}
+                  name: {{ .Data.TLSCASecretName }}
               - secret:
-                  name: {{ .Data.AgentTLSCLISecretName }}
+                  name: {{ .Data.TLSCLISecretName }}
               - secret:
-                  name: {{ .Data.AgentTLSClientSecretName }}
-{{ end }}
+                  name: {{ .Data.TLSClientSecretName }}
 `
 
 var sidecarTLSCMTemplate = `apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ .Name }}-{{ .Namespace }}-tls
+  name: {{ .Name }}-{{ .Namespace }}-client-tls
   namespace: {{ .PatchTarget.Namespace }}
 data:
-  00-agent-tls.json: |-
-    {
-      "verify_incoming": true,
-      "verify_outgoing": true,
-      "ca_file": "/consul/tls/consul-agent-ca.pem",
-      "cert_file": "/consul/tls/dc1-client-consul-0.pem",
-      "key_file": "/consul/tls/dc1-client-consul-0-key.pem",
-      "ports": {
-        "http": -1,
-        "https": 8501
-      }
-    }
+  00-agent-tls.hcl: |-
+    cert_file = "/consul/tls/dc1-client-consul-0.pem"
+    key_file = "/consul/tls/dc1-client-consul-0-key.pem"
 `

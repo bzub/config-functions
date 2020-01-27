@@ -13,9 +13,9 @@ metadata:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
 data:
-  init_enabled: "{{ .Data.InitEnabled }}"
-  unseal_enabled: "{{ .Data.UnsealEnabled }}"
-  generate_tls_enabled: "{{ .Data.GenerateTLSEnabled }}"
+  init_job_enabled: "{{ .Data.InitJobEnabled }}"
+  unseal_job_enabled: "{{ .Data.UnsealJobEnabled }}"
+  tls_generator_job_enabled: "{{ .Data.TLSGeneratorJobEnabled }}"
   unseal_secret_name: "{{ .Data.UnsealSecretName }}"
 `
 
@@ -23,24 +23,35 @@ data:
 // representation of a Kubernetes ConfigMap Resource.
 type FunctionConfig struct {
 	// ObjectMeta contains Resource metadata to use in templates.
+	//
+	// The following information from the function config are applied to
+	// all Resource configs the function manages/generates:
+	// - `metadata.name` (Used as a prefix for Resource names.)
+	// - `metadata.namespace`
+	//
+	// In addition, the function sets the following labels on Resource
+	// configs:
+	// - `app.kubernetes.io/name` (Defaults to `vault-server`.)
+	// - `app.kubernetes.io/instance` (Default is the value of `metadata.name`)
 	yaml.ObjectMeta `yaml:"metadata"`
 
+	// Data contains various options specific to this config function.
 	Data FunctionData
 }
 
 // FunctionData holds settings used in the config function.
 type FunctionData struct {
-	// InitEnabled creates a Job which performs "vault operator init" on a
-	// new Vault cluster, and stores unseal keys in a Secret.
-	InitEnabled bool `yaml:"init_enabled"`
+	// InitJobEnabled creates a Job which performs "vault operator init" on
+	// a new Vault cluster, and stores unseal keys in a Secret.
+	InitJobEnabled bool `yaml:"init_job_enabled"`
 
-	// UnsealEnabled creates a Job which performs "vault operator unseal"
+	// UnsealJobEnabled creates a Job which performs "vault operator unseal"
 	// on a Vault cluster.
-	UnsealEnabled bool `yaml:"unseal_enabled"`
+	UnsealJobEnabled bool `yaml:"unseal_job_enabled"`
 
-	// GenerateTLSEnabled creates Jobs which generate TLS assets for
+	// TLSGeneratorJobEnabled creates Jobs which generate TLS assets for
 	// communication with Vault.
-	GenerateTLSEnabled bool `yaml:"generate_tls_enabled"`
+	TLSGeneratorJobEnabled bool `yaml:"tls_generator_job_enabled"`
 
 	// UnsealSecretName is the name of the Secret used to hold unseal key
 	// shares.
@@ -60,12 +71,12 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 
 		// Convert KV string values into associated FunctionData types.
 		switch {
-		case key == "init_enabled" && value == "true":
-			d.InitEnabled = true
-		case key == "unseal_enabled" && value == "true":
-			d.UnsealEnabled = true
-		case key == "generate_tls_enabled" && value == "true":
-			d.GenerateTLSEnabled = true
+		case key == "init_job_enabled" && value == "true":
+			d.InitJobEnabled = true
+		case key == "unseal_job_enabled" && value == "true":
+			d.UnsealJobEnabled = true
+		case key == "tls_generator_job_enabled" && value == "true":
+			d.TLSGeneratorJobEnabled = true
 		case key == "unseal_secret_name":
 			d.UnsealSecretName = value
 		}
