@@ -14,9 +14,10 @@ type. The options available to configure the function are documented in the
 
 ## Getting Started
 
-In the following example we create Resource configs for a basic, no-frills
-Consul server. For production deployments, check out the [production
-demo](./productionExample.md).
+In the following example we create Resource configs for a Vault server. These
+configs are meant to be checked into version control, so Secrets are not
+included. Optionally, all necessary Secrets can be created in-cluster via Jobs
+-- check out the [production demo](./productionExample.md).
 
 Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
@@ -79,9 +80,9 @@ metadata:
       container:
         image: gcr.io/config-functions/vault:v0.0.1
 data:
-  generate_tls_enabled: "false"
-  init_enabled: "false"
-  unseal_enabled: "false"
+  init_job_enabled: "false"
+  tls_generator_job_enabled: "false"
+  unseal_job_enabled: "false"
   unseal_secret_name: "my-vault-example-unseal"'
 
 TEST="$(cat $DEMO/function-config.yaml)"

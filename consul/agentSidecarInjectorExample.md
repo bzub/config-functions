@@ -90,8 +90,9 @@ Secrets with the following name formats:
 - `{{ .ConsulName }}-{{ .ConsulNamespace }}-tls-cli`
 - `{{ .ConsulName }}-{{ .ConsulNamespace }}-gossip`
 
-Also the following ConfigMap:
-- `{{ .ConsulName }}-{{ .ConsulNamespace }}-server`
+Also the following ConfigMaps:
+- `{{ .ConsulName }}-{{ .ConsulNamespace }}-agent`
+- `{{ .ConsulName }}-{{ .ConsulNamespace }}-client-tls`
 
 These Secrets and ConfigMaps are automatically created in the Consul server's
 namespace.  You will need to manually copy these Secrets to any additional
@@ -101,7 +102,12 @@ For this example you can use kubectl/grep/sed to copy the Secrets from the
 `example` namespace to the `other-namespace` namespace.
 
 > ```sh
-> kubectl -n example get cm -o yaml my-consul-example-server |\
+> kubectl -n example get cm -o yaml my-consul-example-agent |\
+>   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
+>   sed 's/namespace: example/namespace: other-namespace/' |\
+>   kubectl apply -f -
+> 
+> kubectl -n example get cm -o yaml my-consul-example-client-tls |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -

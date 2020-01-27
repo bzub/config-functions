@@ -14,9 +14,10 @@ type. The options available to configure the function are documented in the
 
 ## Getting Started
 
-In the following example we create Resource configs for a basic, no-frills
-Consul server. For production deployments, check out the [production
-demo](./productionExample.md).
+In the following example we create Resource configs for a Consul server. These
+configs are meant to be checked into version control, so Secrets are not
+included. Optionally, all necessary Secrets can be created in-cluster via Jobs
+-- check out the [production demo](./productionExample.md).
 
 Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->

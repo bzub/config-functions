@@ -43,7 +43,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 	generatedRs = append(generatedRs, serverRs...)
 
-	if fnCfg.Data.InitEnabled {
+	if fnCfg.Data.InitJobEnabled {
 		// Generate init Job Resources from templates.
 		initRs, err := cfunc.ParseTemplates(f.initJobTemplates(), fnCfg)
 		if err != nil {
@@ -52,7 +52,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, initRs...)
 	}
 
-	if fnCfg.Data.UnsealEnabled {
+	if fnCfg.Data.UnsealJobEnabled {
 		// Generate unseal Job Resources from templates.
 		unsealRs, err := cfunc.ParseTemplates(f.unsealJobTemplates(), fnCfg)
 		if err != nil {
@@ -61,7 +61,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, unsealRs...)
 	}
 
-	if fnCfg.Data.GenerateTLSEnabled {
+	if fnCfg.Data.TLSGeneratorJobEnabled {
 		// Create a cfssl function config from a ConfigMap template.
 		cfsslFnCfg, err := cfunc.ParseTemplate("cfssl-cm", cfsslCMTemplate, fnCfg)
 		if err != nil {

@@ -4,7 +4,7 @@
 
 Creates Resource configs to deploy [Consul][consul] on Kubernetes, using the
 [more advanced features](./README.md#function-features) of the Consul config
-function.
+function. All Secrets necessary are generated in-cluster via Jobs.
 
 ## Getting Started
 
