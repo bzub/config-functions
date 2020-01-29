@@ -24,7 +24,7 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/function-config.yaml
+cat <<EOF >$DEMO/my-vault_configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,7 +40,7 @@ EOF
 Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
-kustomize config run $DEMO
+config run $DEMO
 ```
 
 ## Generated Resources
@@ -49,12 +49,12 @@ The function generates the following resources.
 <!-- @verifyResources @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  ConfigMap example/my-vault
 ├── [Resource]  ConfigMap example/my-vault-server
 ├── [Resource]  Service example/my-vault-server
-└── [Resource]  StatefulSet example/my-vault-server'
+├── [Resource]  StatefulSet example/my-vault-server
+└── [Resource]  ConfigMap example/my-vault'
 
-TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
+TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -85,7 +85,7 @@ data:
   unseal_job_enabled: "false"
   unseal_secret_name: "my-vault-example-unseal"'
 
-TEST="$(cat $DEMO/function-config.yaml)"
+TEST="$(cat $DEMO/my-vault_configmap.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

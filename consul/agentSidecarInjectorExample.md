@@ -64,7 +64,7 @@ EOF
 Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
-kustomize config run $DEMO
+config run $DEMO --global-scope
 ```
 
 The `my-deployment` Deployment now has a Consul agent sidecar container,
@@ -79,7 +79,7 @@ EXPECTED='.
         └── 1
             └── name: example'
 
-TEST="$(kustomize config grep "kind=Deployment" $DEMO|kustomize config tree --name)"
+TEST="$(config grep "kind=Deployment" $DEMO|config tree --name)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
