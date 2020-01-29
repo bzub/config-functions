@@ -24,7 +24,7 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/function-config.yaml
+cat <<EOF >$DEMO/my-consul_configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -40,7 +40,7 @@ EOF
 Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
-kustomize config run $DEMO
+config run $DEMO
 ```
 
 ## Generated Resources
@@ -49,15 +49,15 @@ The function generates the following resources.
 <!-- @verifyResources @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  ConfigMap example/my-consul
 ├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
-└── [Resource]  StatefulSet example/my-consul-server'
+├── [Resource]  StatefulSet example/my-consul-server
+└── [Resource]  ConfigMap example/my-consul'
 
-TEST="$(kustomize config tree $DEMO --graph-structure=owners)"
+TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -94,31 +94,31 @@ data:
   tls_generator_job_enabled: "false"
   tls_server_secret_name: "my-consul-example-tls-server"'
 
-TEST="$(cat $DEMO/function-config.yaml)"
+TEST="$(cat $DEMO/my-consul_configmap.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
 ### Setters
 
-Some parts of the configuration can be modified via `kustomize config set`.
+Some parts of the configuration can be modified via `config set`.
 
 <!-- @listDefaultSetters @test -->
 ```sh
 EXPECTED=\
 "my-consul-replicas"
 
-TEST="$(kustomize config set $DEMO|tail -n +2|awk '{print $1}')"
+TEST="$(config set $DEMO|tail -n +2|awk '{print $1}')"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
 #### Replicas
 
 To change the number of Consul server replicas, it's recommended to use
-`kustomize config set` because this impacts other areas of the configs.
+`config set` because this impacts other areas of the configs.
 
 <!-- @verifyConsulReplicas3 @test -->
 ```sh
-kustomize config set $DEMO my-consul-replicas 3
+config set $DEMO my-consul-replicas 3
 
 EXPECTED='.
 └── [Resource]  StatefulSet example/my-consul-server
@@ -127,8 +127,8 @@ EXPECTED='.
         └── 0
             └── [name=CONSUL_REPLICAS]: {name: CONSUL_REPLICAS, value: "3"}'
 
-TEST="$(kustomize config grep "kind=StatefulSet" $DEMO |\
-  kustomize config tree --graph-structure=owners --replicas \
+TEST="$(config grep "kind=StatefulSet" $DEMO |\
+  config tree --graph-structure=owners --replicas \
     --field="spec.template.spec.containers[name=consul].env[name=CONSUL_REPLICAS]")"
 [ "$TEST" = "$EXPECTED" ]
 ```

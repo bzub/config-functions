@@ -13,7 +13,7 @@ Set up a workspace and define a function configuration.
 ```sh
 DEMO=$(mktemp -d)
 
-cat <<EOF >$DEMO/function-config.yaml
+cat <<EOF >$DEMO/my-vault_configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -33,7 +33,7 @@ EOF
 Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
-kustomize config run $DEMO
+config run $DEMO
 ```
 
 ## Generated Resources
@@ -42,7 +42,6 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  ConfigMap example/my-vault
 ├── [Resource]  Job example/my-vault-init
 ├── [Resource]  Role example/my-vault-init
 ├── [Resource]  RoleBinding example/my-vault-init
@@ -58,9 +57,10 @@ EXPECTED='.
 ├── [Resource]  Job example/my-vault-unseal
 ├── [Resource]  Role example/my-vault-unseal
 ├── [Resource]  RoleBinding example/my-vault-unseal
-└── [Resource]  ServiceAccount example/my-vault-unseal'
+├── [Resource]  ServiceAccount example/my-vault-unseal
+└── [Resource]  ConfigMap example/my-vault'
 
-TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
+TEST="$(config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

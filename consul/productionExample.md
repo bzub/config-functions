@@ -33,7 +33,7 @@ EOF
 Generate Resources.
 <!-- @generateInitialResources @test -->
 ```sh
-kustomize config run $DEMO
+config run $DEMO
 ```
 
 ## Generated Resources
@@ -62,7 +62,7 @@ EXPECTED='.
 ├── [Resource]  RoleBinding example/my-consul-tls
 └── [Resource]  ServiceAccount example/my-consul-tls'
 
-TEST="$(kustomize config tree --graph-structure=owners $DEMO)"
+TEST="$(config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
