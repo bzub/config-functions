@@ -106,27 +106,27 @@ For this example you can use kubectl/grep/sed to copy the Secrets from the
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
-> 
+>
 > kubectl -n example get cm -o yaml my-consul-example-client-tls |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
-> 
+>
 > kubectl -n example get secret -o yaml my-consul-example-tls-ca |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
-> 
+>
 > kubectl -n example get secret -o yaml my-consul-example-tls-client |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
-> 
+>
 > kubectl -n example get secret -o yaml my-consul-example-tls-cli |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\
 >   kubectl apply -f -
-> 
+>
 > kubectl -n example get secret -o yaml my-consul-example-gossip |\
 >   grep -Ev 'creationTimestamp:|resourceVersion:|selfLink:|uid:' |\
 >   sed 's/namespace: example/namespace: other-namespace/' |\

@@ -81,8 +81,8 @@ metadata:
         image: gcr.io/config-functions/etcd:v0.0.1
 data:
   tls_ca_secret_name: "my-etcd-example-tls-ca"
-  tls_client_secret_name: "my-etcd-example-tls-client"
   tls_generator_job_enabled: "false"
+  tls_root_client_secret_name: "my-etcd-example-tls-client-root"
   tls_server_secret_name: "my-etcd-example-tls-server"'
 
 TEST="$(cat $DEMO/my-etcd_configmap.yaml)"

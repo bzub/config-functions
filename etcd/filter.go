@@ -99,11 +99,11 @@ func (f *EtcdFilter) FunctionConfig(in []*yaml.RNode) (*FunctionConfig, error) {
 	// Set defaults.
 	fnCfg := FunctionConfig{}
 	fnCfg.Data = FunctionData{
-		TLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
-		TLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
-		TLSClientSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
-		InitialCluster:      eic,
-		Hostnames:           hostnames,
+		TLSServerSecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
+		TLSCASecretName:         fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
+		TLSRootClientSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client-root",
+		InitialCluster:          eic,
+		Hostnames:               hostnames,
 	}
 
 	// Populate function data from config.

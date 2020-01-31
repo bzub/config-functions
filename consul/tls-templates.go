@@ -24,7 +24,7 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: generate-tls
-          image: docker.io/library/consul:1.7.0-beta3
+          image: docker.io/library/consul:1.7.0-beta4
           command:
             - /bin/sh
             - -ec
@@ -35,7 +35,9 @@ spec:
               consul tls cert create -cli
               consul tls cert create -client
               for i in $(seq 3); do
-                consul tls cert create -server
+                consul tls cert create -server \
+                  -additional-dnsname "{{ .Name }}-server.{{ .Namespace }}" \
+                  -additional-dnsname "{{ .Name }}-server.{{ .Namespace }}.svc"
               done
           volumeMounts:
             - mountPath: /tls/generated
