@@ -22,7 +22,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	}
 
 	// Get data for templates.
-	fnCfg, err := f.FunctionConfig()
+	fnCfg, err := f.FunctionConfig(in)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (f *VaultFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 
 // FunctionConfig populates a struct with information needed for Resource
 // templates.
-func (f *VaultFilter) FunctionConfig() (*FunctionConfig, error) {
+func (f *VaultFilter) FunctionConfig(in []*yaml.RNode) (*FunctionConfig, error) {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err
@@ -96,10 +96,16 @@ func (f *VaultFilter) FunctionConfig() (*FunctionConfig, error) {
 		return nil, fmt.Errorf("function config must specify metadata.name.")
 	}
 
+	hostnames, err := cfunc.GetStatefulSetHostnames(in, fnMeta.Name+"-server", fnMeta.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
 	// Set defaults.
 	fnCfg := FunctionConfig{}
 	fnCfg.Data = FunctionData{
 		UnsealSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-unseal",
+		Hostnames:        hostnames,
 	}
 
 	// Populate function data from config.

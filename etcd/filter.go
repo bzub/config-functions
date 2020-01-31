@@ -2,7 +2,6 @@ package etcd
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/bzub/config-functions/cfssl"
@@ -92,7 +91,7 @@ func (f *EtcdFilter) FunctionConfig(in []*yaml.RNode) (*FunctionConfig, error) {
 		return nil, err
 	}
 
-	hostnames, err := f.getHostnames(in)
+	hostnames, err := cfunc.GetStatefulSetHostnames(in, fnMeta.Name+"-server", fnMeta.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -100,11 +99,11 @@ func (f *EtcdFilter) FunctionConfig(in []*yaml.RNode) (*FunctionConfig, error) {
 	// Set defaults.
 	fnCfg := FunctionConfig{}
 	fnCfg.Data = FunctionData{
-		InitialCluster:      eic,
-		Hostnames:           hostnames,
 		TLSServerSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-server",
 		TLSCASecretName:     fnMeta.Name + "-" + fnMeta.Namespace + "-tls-ca",
 		TLSClientSecretName: fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
+		InitialCluster:      eic,
+		Hostnames:           hostnames,
 	}
 
 	// Populate function data from config.
@@ -134,7 +133,7 @@ func (f *EtcdFilter) getInitialCluster(in []*yaml.RNode) (string, error) {
 		return "", err
 	}
 
-	names, err := f.getHostnames(in)
+	names, err := cfunc.GetStatefulSetHostnames(in, fnMeta.Name+"-server", fnMeta.Namespace)
 	if err != nil {
 		return "", err
 	}
@@ -144,74 +143,4 @@ func (f *EtcdFilter) getInitialCluster(in []*yaml.RNode) (string, error) {
 	}
 
 	return strings.Join(names, ","), nil
-}
-
-func (f *EtcdFilter) getHostnames(in []*yaml.RNode) ([]string, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-
-	sts, err := f.getStatefulSet(in)
-	if err != nil {
-		return nil, err
-	}
-
-	replicas, err := getReplicas(sts)
-	if err != nil {
-		return nil, err
-	}
-
-	names := []string{}
-	for i := 0; i < replicas; i++ {
-		names = append(names, fmt.Sprintf("%s-server-%v", fnMeta.Name, i))
-	}
-
-	return names, nil
-}
-
-func (f *EtcdFilter) getStatefulSet(in []*yaml.RNode) (*yaml.RNode, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, r := range in {
-		rMeta, err := r.GetMeta()
-		if err != nil {
-			return nil, err
-		}
-
-		if rMeta.Name != fnMeta.Name+"-server" ||
-			rMeta.Namespace != fnMeta.Namespace ||
-			rMeta.Kind != "StatefulSet" {
-			continue
-		}
-
-		// Found it.
-		return r, nil
-	}
-
-	return nil, nil
-}
-
-func getReplicas(r *yaml.RNode) (int, error) {
-	if r == nil {
-		return 1, nil
-	}
-
-	replicasR, err := r.Pipe(yaml.Lookup("spec", "replicas"))
-	if err != nil {
-		return 0, err
-	}
-	if replicasR == nil {
-		return 1, nil
-	}
-
-	replicas, err := strconv.Atoi(replicasR.Document().Value)
-	if err != nil {
-		return 0, err
-	}
-
-	return replicas, nil
 }

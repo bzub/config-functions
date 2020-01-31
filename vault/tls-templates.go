@@ -48,14 +48,18 @@ data:
         }
       ]
     }
-  0_server_csr.json: |-
+{{ range $i, $hostname := .Data.Hostnames }}
+  {{ $i }}_server_csr.json: |-
     {
       "CN": "vault-server",
       "hosts": [
         "::1",
         "127.0.0.1",
         "localhost",
-        "{{ .Name }}-server.{{ .Namespace }}.svc"
+        "{{ $.Name }}-server",
+        "{{ $.Name }}-server.{{ $.Namespace }}.svc",
+        "{{ $hostname }}",
+        "{{ $hostname }}.{{ $.Name }}-server"
       ],
       "key": {
         "algo": "rsa",
@@ -69,46 +73,5 @@ data:
         }
       ]
     }
-  1_server_csr.json: |-
-    {
-      "CN": "vault-server",
-      "hosts": [
-        "::1",
-        "127.0.0.1",
-        "localhost",
-        "{{ .Name }}-server.{{ .Namespace }}.svc"
-      ],
-      "key": {
-        "algo": "rsa",
-        "size": 2048
-      },
-      "names": [
-        {
-          "C": "US",
-          "ST": "CA",
-          "L": "San Francisco"
-        }
-      ]
-    }
-  2_server_csr.json: |-
-    {
-      "CN": "vault-server",
-      "hosts": [
-        "::1",
-        "127.0.0.1",
-        "localhost",
-        "{{ .Name }}-server.{{ .Namespace }}.svc"
-      ],
-      "key": {
-        "algo": "rsa",
-        "size": 2048
-      },
-      "names": [
-        {
-          "C": "US",
-          "ST": "CA",
-          "L": "San Francisco"
-        }
-      ]
-    }
+{{ end }}
 `

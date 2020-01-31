@@ -3,7 +3,7 @@
 # Vault Configuration Function Production Example
 
 Creates Resource configs to deploy [Vault][vault] on Kubernetes, using the
-[more advanced features](./README.md#function-features) of the Consul config
+[more advanced features](./README.md#function-features) of the Vault config
 function. All Secrets necessary are generated in-cluster via Jobs.
 
 ## Getting Started

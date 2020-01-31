@@ -56,6 +56,13 @@ type FunctionData struct {
 	// UnsealSecretName is the name of the Secret used to hold unseal key
 	// shares.
 	UnsealSecretName string `yaml:"unseal_secret_name"`
+
+	// Hostnames are the names of the pods that will be created by the
+	// StatefulSet. It is updated when the StatefulSet's `spec.replicas`
+	// changes.
+	//
+	// Hostnames is only used in Go, and not exposed via YAML config(s).
+	Hostnames []string
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler. It ensures all values from
