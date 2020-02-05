@@ -34,8 +34,8 @@ data:
   ETCD_PEER_CERT_FILE: /etcd/tls/peer.pem
   ETCD_PEER_KEY_FILE: /etcd/tls/peer-key.pem
   ETCDCTL_CACERT: /etcd/tls/ca.pem
-  ETCDCTL_CERT: /etcd/tls/client.pem
-  ETCDCTL_KEY: /etcd/tls/client-key.pem
+  ETCDCTL_CERT: /etcd/tls/root-client.pem
+  ETCDCTL_KEY: /etcd/tls/root-client-key.pem
 `
 
 var serverStsTemplate = `apiVersion: apps/v1
@@ -74,8 +74,8 @@ spec:
               cp "/etcd/tls/secret/${index}-server-key.pem" /etcd/tls/server-key.pem
               cp "/etcd/tls/secret/${index}-peer.pem" /etcd/tls/peer.pem
               cp "/etcd/tls/secret/${index}-peer-key.pem" /etcd/tls/peer-key.pem
-              cp "/etcd/tls/secret/0-client.pem" /etcd/tls/client.pem
-              cp "/etcd/tls/secret/0-client-key.pem" /etcd/tls/client-key.pem
+              cp "/etcd/tls/secret/root-client.pem" /etcd/tls
+              cp "/etcd/tls/secret/root-client-key.pem" /etcd/tls
           volumeMounts:
             - name: etcd-server-tls-secret
               mountPath: /etcd/tls/secret
@@ -104,6 +104,8 @@ spec:
               name: client
             - containerPort: 2380
               name: peer
+            - containerPort: 8080
+              name: metrics
           readinessProbe:
             exec:
               command:
@@ -127,7 +129,7 @@ spec:
               - secret:
                   name: {{ .Data.TLSServerSecretName }}
               - secret:
-                  name: {{ .Data.TLSClientSecretName }}
+                  name: {{ .Data.TLSRootClientSecretName }}
 `
 
 var serverSvcTemplate = `apiVersion: v1
@@ -138,6 +140,34 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
     app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
+  annotations:
+    config.bzub.dev/prometheus-scrape_configs: |-
+      - job_name: {{ .Name }}
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - {{ .Namespace }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: {{ .Name }}-server
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: metrics
+          - action: labelmap
+            regex: __meta_kubernetes_service_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_service_name]
+            action: replace
+            target_label: kubernetes_service_name
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
 spec:
   selector:
     app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
@@ -149,4 +179,6 @@ spec:
       port: 2380
     - name: etcd-client-ssl
       port: 2379
+    - name: metrics
+      port: 8080
 `

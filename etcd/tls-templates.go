@@ -71,9 +71,9 @@ data:
         }
       ]
     }
-  0_client_csr.json: |-
+  root_client_csr.json: |-
     {
-      "CN": "etcd-client",
+      "CN": "root",
       "hosts": [""],
       "key": {
         "algo": "rsa",
@@ -172,10 +172,10 @@ spec:
                 "--from-file=/tls/ca-key.pem" \
                 "--from-file=/tls/ca.pem"
 
-              secret="$(tls_client_secret_name)"
+              secret="$(tls_root_client_secret_name)"
               kubectl create secret generic "${secret}" \
-                "--from-file=/tls/0-client-key.pem" \
-                "--from-file=/tls/0-client.pem"
+                "--from-file=/tls/root-client-key.pem" \
+                "--from-file=/tls/root-client.pem"
           envFrom:
             - configMapRef:
                 name: {{ .Name }}

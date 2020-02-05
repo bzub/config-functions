@@ -105,7 +105,7 @@ spec:
               mountPath: /consul/tls
       containers:
         - name: consul
-          image: docker.io/library/consul:1.7.0-beta3
+          image: docker.io/library/consul:1.7.0-beta4
           command:
             - consul
             - agent

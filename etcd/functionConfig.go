@@ -16,7 +16,7 @@ data:
   tls_generator_job_enabled: "{{ .Data.TLSGeneratorJobEnabled }}"
   tls_server_secret_name: "{{ .Data.TLSServerSecretName }}"
   tls_ca_secret_name: "{{ .Data.TLSCASecretName }}"
-  tls_client_secret_name: "{{ .Data.TLSClientSecretName }}"
+  tls_root_client_secret_name: "{{ .Data.TLSRootClientSecretName }}"
 `
 
 // FunctionConfig holds information used in Resource templates. It is a Go
@@ -53,9 +53,9 @@ type FunctionData struct {
 	// assets.
 	TLSCASecretName string `yaml:"tls_ca_secret_name"`
 
-	// TLSClientSecretName is the name of the Secret used to hold Etcd
-	// Client TLS assets.
-	TLSClientSecretName string `yaml:"tls_client_secret_name"`
+	// TLSRootClientSecretName is the name of the Secret used to hold Etcd
+	// root user TLS assets.
+	TLSRootClientSecretName string `yaml:"tls_root_client_secret_name"`
 
 	// InitialCluster is used to configure etcd's `initial-cluster`
 	// setting. By default the function detects the number of StatefulSet
@@ -94,8 +94,8 @@ func (d *FunctionData) UnmarshalYAML(node *yaml.Node) error {
 			d.TLSServerSecretName = value
 		case key == "tls_ca_secret_name":
 			d.TLSCASecretName = value
-		case key == "tls_client_secret_name":
-			d.TLSClientSecretName = value
+		case key == "tls_root_client_secret_name":
+			d.TLSRootClientSecretName = value
 		}
 
 		key = ""
