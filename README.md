@@ -10,6 +10,8 @@ For more information see the tested README examples for each config function:
 - [cfssl](/cfssl)
 - [consul](/consul)
 - [etcd](/etcd)
+- [nodeexporter](/nodeexporter)
+- [prometheus](/prometheus)
 - [vault](/vault)
 
 ## Tests
