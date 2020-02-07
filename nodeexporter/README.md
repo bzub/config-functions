@@ -19,8 +19,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-nodeexporter_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-nodeexporter.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -45,9 +46,9 @@ The function generates the following resources.
 <!-- @verifyResources @test -->
 ```sh
 EXPECTED='.
+├── [Resource]  ConfigMap example/my-nodeexporter
 ├── [Resource]  DaemonSet example/my-nodeexporter-server
-├── [Resource]  Service example/my-nodeexporter-server
-└── [Resource]  ConfigMap example/my-nodeexporter'
+└── [Resource]  Service example/my-nodeexporter-server'
 
 TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
@@ -75,7 +76,7 @@ metadata:
       container:
         image: gcr.io/config-functions/nodeexporter:v0.0.1'
 
-TEST="$(cat $DEMO/my-nodeexporter_configmap.yaml)"
+TEST="$(cat $DEMO/functions/configmap_my-nodeexporter.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

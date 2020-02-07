@@ -12,8 +12,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-etcd_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-etcd.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -41,18 +42,18 @@ The function config generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-etcd-cfssl
-├── [Resource]  Job example/my-etcd-cfssl
-├── [Resource]  Role example/my-etcd-cfssl
-├── [Resource]  RoleBinding example/my-etcd-cfssl
-├── [Resource]  ServiceAccount example/my-etcd-cfssl
 ├── [Resource]  ConfigMap example/my-etcd-server
-├── [Resource]  Service example/my-etcd-server
-├── [Resource]  StatefulSet example/my-etcd-server
+├── [Resource]  ConfigMap example/my-etcd
+├── [Resource]  Job example/my-etcd-cfssl
 ├── [Resource]  Job example/my-etcd-tls
+├── [Resource]  Role example/my-etcd-cfssl
 ├── [Resource]  Role example/my-etcd-tls
+├── [Resource]  RoleBinding example/my-etcd-cfssl
 ├── [Resource]  RoleBinding example/my-etcd-tls
+├── [Resource]  Service example/my-etcd-server
+├── [Resource]  ServiceAccount example/my-etcd-cfssl
 ├── [Resource]  ServiceAccount example/my-etcd-tls
-└── [Resource]  ConfigMap example/my-etcd'
+└── [Resource]  StatefulSet example/my-etcd-server'
 
 TEST="$(config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]

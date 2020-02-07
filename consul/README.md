@@ -23,8 +23,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-consul_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-consul.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -51,11 +52,11 @@ The function generates the following resources.
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
+├── [Resource]  ConfigMap example/my-consul
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
-├── [Resource]  StatefulSet example/my-consul-server
-└── [Resource]  ConfigMap example/my-consul'
+└── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
@@ -94,7 +95,7 @@ data:
   tls_generator_job_enabled: "false"
   tls_server_secret_name: "my-consul-example-tls-server"'
 
-TEST="$(cat $DEMO/my-consul_configmap.yaml)"
+TEST="$(cat $DEMO/functions/configmap_my-consul.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
