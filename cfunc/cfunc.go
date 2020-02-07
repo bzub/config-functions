@@ -7,8 +7,62 @@ import (
 	"strconv"
 	"text/template"
 
+	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
+
+// ConfigFunction is a standardized starting-point for Kubernetes configuration
+// function implementations.
+//
+// https://github.com/kubernetes-sigs/kustomize/blob/master/cmd/config/docs/api-conventions/functions-spec.md
+type ConfigFunction struct {
+	// RW is used to read from an input and write to an output.
+	RW *kio.ByteReadWriter
+
+	// ObjectMeta contains Resource metadata to use in templates.
+	//
+	// The following information from the function config should be applied
+	// to all Resource configs the function manages/generates:
+	// - `metadata.name` (Used as a value and/or prefix for Resource names.)
+	// - `metadata.namespace`
+	//
+	// In addition, the function should set the following labels on
+	// Resource configs:
+	// - `app.kubernetes.io/name` (Implementation specific. Used to group multiple instances of the same software)
+	// - `app.kubernetes.io/instance` (Default is the value of `metadata.name`)
+	yaml.ObjectMeta `yaml:"metadata"`
+}
+
+func (f *ConfigFunction) SyncMetadata(appName string) error {
+	fnMeta, err := f.RW.FunctionConfig.GetMeta()
+	if err != nil {
+		return err
+	}
+	// Make sure function config has metadata.name.
+	if fnMeta.Name == "" {
+		return fmt.Errorf("function config must specify metadata.name.")
+	}
+
+	// Populate function data from config.
+	if err := yaml.Unmarshal([]byte(f.RW.FunctionConfig.MustString()), f); err != nil {
+		return err
+	}
+
+	// Set app labels.
+	if f.Labels == nil {
+		f.Labels = make(map[string]string)
+	}
+	name, ok := f.Labels["app.kubernetes.io/name"]
+	if !ok || name == "" {
+		f.Labels["app.kubernetes.io/name"] = appName
+	}
+	instance, ok := f.Labels["app.kubernetes.io/instance"]
+	if !ok || instance == "" {
+		f.Labels["app.kubernetes.io/instance"] = fnMeta.Name
+	}
+
+	return nil
+}
 
 func FixStyles(in ...*yaml.RNode) error {
 	for _, r := range in {

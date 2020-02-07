@@ -1,6 +1,6 @@
 package prometheus
 
-func (f *PrometheusFilter) serverTemplates() map[string]string {
+func serverTemplates() map[string]string {
 	return map[string]string{
 		"server-cm":          serverCmTemplate,
 		"server-sts":         serverStsTemplate,

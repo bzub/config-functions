@@ -1,6 +1,6 @@
 package cfssl
 
-func (f *CfsslFilter) cfsslJobTemplates() map[string]string {
+func cfsslJobTemplates() map[string]string {
 	return map[string]string{
 		"cfssl-job":         cfsslJobTemplate,
 		"cfssl-sa":          cfsslSATemplate,

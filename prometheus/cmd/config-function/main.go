@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	prometheusFilter := &prometheus.ConfigFunction{}
+	prometheusFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&prometheus.PrometheusFilter{rw},
+			prometheusFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},

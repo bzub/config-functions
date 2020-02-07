@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	consulFilter := &consul.ConfigFunction{}
+	consulFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&consul.ConsulFilter{rw},
+			consulFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},

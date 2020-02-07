@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	vaultFilter := &vault.ConfigFunction{}
+	vaultFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&vault.VaultFilter{rw},
+			vaultFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},

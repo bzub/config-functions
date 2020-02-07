@@ -1,38 +1,60 @@
 package prometheus
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/bzub/config-functions/cfunc"
-	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
 )
 
-const (
-	ScrapeConfigsAnnotation = "config.bzub.dev/prometheus-scrape_configs"
-)
+const ScrapeConfigsAnnotation = "config.bzub.dev/prometheus-scrape_configs"
 
-// PrometheusFilter implements kio.Filter
-type PrometheusFilter struct {
-	RW *kio.ByteReadWriter
+const DefaultAppNameAnnotationValue = "prometheus-server"
+
+const functionCMTemplate = `apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Name }}
+  namespace: "{{ .Namespace }}"
+  labels:
+    app.kubernetes.io/name: {{ index .Labels "app.kubernetes.io/name" }}
+    app.kubernetes.io/instance: {{ index .Labels "app.kubernetes.io/instance" }}
+data:
+`
+
+// ConfigFunction implements kio.Filter and holds information used in
+// Resource templates.
+type ConfigFunction struct {
+	cfunc.ConfigFunction `yaml:",inline"`
+
+	// Data contains various options specific to this config function.
+	Data Options
+}
+
+// Options holds settings used in the config function.
+type Options struct {
+	// ScrapeConfigs are configuration snippets to be included in the
+	// Prometheus `scrape_configs`. These are collected from input Resource
+	// annotations.
+	//
+	// https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config
+	ScrapeConfigs []string
 }
 
 // Filter generates Resources.
-func (f *PrometheusFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
+func (f *ConfigFunction) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	// Workaround single line style of function config.
 	if err := cfunc.FixStyles(in...); err != nil {
 		return nil, err
 	}
 
 	// Get data for templates.
-	fnCfg, err := f.FunctionConfig(in)
-	if err != nil {
+	if err := f.syncData(in); err != nil {
 		return nil, err
 	}
 
 	// Generate a ConfigMap from the function config.
-	fnConfigMap, err := cfunc.ParseTemplate("function-cm", functionCMTemplate, fnCfg)
+	fnConfigMap, err := cfunc.ParseTemplate("function-cm", functionCMTemplate, f)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +63,7 @@ func (f *PrometheusFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	generatedRs := []*yaml.RNode{fnConfigMap}
 
 	// Generate Prometheus server Resources from templates.
-	serverRs, err := cfunc.ParseTemplates(f.serverTemplates(), fnCfg)
+	serverRs, err := cfunc.ParseTemplates(serverTemplates(), f)
 	if err != nil {
 		return nil, err
 	}
@@ -51,51 +73,31 @@ func (f *PrometheusFilter) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	return append(generatedRs, in...), nil
 }
 
-// FunctionConfig populates a struct with information needed for Resource
-// templates.
-func (f *PrometheusFilter) FunctionConfig(in []*yaml.RNode) (*FunctionConfig, error) {
-	fnMeta, err := f.RW.FunctionConfig.GetMeta()
-	if err != nil {
-		return nil, err
-	}
-	// Make sure function config has metadata.name.
-	if fnMeta.Name == "" {
-		return nil, fmt.Errorf("function config must specify metadata.name.")
+// syncData populates a struct with information needed for Resource templates.
+func (f *ConfigFunction) syncData(in []*yaml.RNode) error {
+	if err := f.SyncMetadata(DefaultAppNameAnnotationValue); err != nil {
+		return err
 	}
 
 	scrapeConfigs, err := f.getScrapeConfigs(in)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Set defaults.
-	fnCfg := FunctionConfig{}
-	fnCfg.Data = FunctionData{
+	f.Data = Options{
 		ScrapeConfigs: scrapeConfigs,
 	}
 
 	// Populate function data from config.
-	if err := yaml.Unmarshal([]byte(f.RW.FunctionConfig.MustString()), &fnCfg); err != nil {
-		return nil, err
+	if err := yaml.Unmarshal([]byte(f.RW.FunctionConfig.MustString()), f); err != nil {
+		return err
 	}
 
-	// Set app labels.
-	if fnCfg.Labels == nil {
-		fnCfg.Labels = make(map[string]string)
-	}
-	name, ok := fnCfg.Labels["app.kubernetes.io/name"]
-	if !ok || name == "" {
-		fnCfg.Labels["app.kubernetes.io/name"] = "prometheus-server"
-	}
-	instance, ok := fnCfg.Labels["app.kubernetes.io/instance"]
-	if !ok || instance == "" {
-		fnCfg.Labels["app.kubernetes.io/instance"] = fnMeta.Name
-	}
-
-	return &fnCfg, nil
+	return nil
 }
 
-func (f *PrometheusFilter) getScrapeConfigs(in []*yaml.RNode) ([]string, error) {
+func (f *ConfigFunction) getScrapeConfigs(in []*yaml.RNode) ([]string, error) {
 	fnMeta, err := f.RW.FunctionConfig.GetMeta()
 	if err != nil {
 		return nil, err

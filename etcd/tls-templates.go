@@ -1,6 +1,6 @@
 package etcd
 
-func (f *EtcdFilter) tlsTemplates() map[string]string {
+func tlsTemplates() map[string]string {
 	return map[string]string{
 		"tls-job":         tlsJobTemplate,
 		"tls-sa":          tlsSATemplate,
@@ -87,7 +87,7 @@ data:
         }
       ]
     }
-{{ range $i, $hostname := .Data.Hostnames }}
+{{ range $i, $hostname := .Hostnames }}
   {{ $i }}_server_csr.json: |-
     {
       "CN": "etcd-server",
@@ -113,7 +113,7 @@ data:
       ]
     }
 {{ end }}
-{{ range $i, $hostname := .Data.Hostnames }}
+{{ range $i, $hostname := .Hostnames }}
   {{ $i }}_peer_csr.json: |-
     {
       "CN": "etcd-peer",
