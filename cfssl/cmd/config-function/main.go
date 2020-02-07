@@ -22,7 +22,6 @@ func main() {
 			&cfssl.CfsslFilter{rw},
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
-			&filters.FileSetter{},
 		},
 		Outputs: []kio.Writer{rw},
 	}.Execute()

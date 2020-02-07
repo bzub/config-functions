@@ -12,8 +12,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-vault_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-vault.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -42,23 +43,23 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  Job example/my-vault-init
-├── [Resource]  Role example/my-vault-init
-├── [Resource]  RoleBinding example/my-vault-init
-├── [Resource]  ServiceAccount example/my-vault-init
 ├── [Resource]  ConfigMap example/my-vault-server-cfssl
-├── [Resource]  Job example/my-vault-server-cfssl
-├── [Resource]  Role example/my-vault-server-cfssl
-├── [Resource]  RoleBinding example/my-vault-server-cfssl
-├── [Resource]  ServiceAccount example/my-vault-server-cfssl
 ├── [Resource]  ConfigMap example/my-vault-server
-├── [Resource]  Service example/my-vault-server
-├── [Resource]  StatefulSet example/my-vault-server
+├── [Resource]  ConfigMap example/my-vault
+├── [Resource]  Job example/my-vault-init
+├── [Resource]  Job example/my-vault-server-cfssl
 ├── [Resource]  Job example/my-vault-unseal
+├── [Resource]  Role example/my-vault-init
+├── [Resource]  Role example/my-vault-server-cfssl
 ├── [Resource]  Role example/my-vault-unseal
+├── [Resource]  RoleBinding example/my-vault-init
+├── [Resource]  RoleBinding example/my-vault-server-cfssl
 ├── [Resource]  RoleBinding example/my-vault-unseal
+├── [Resource]  Service example/my-vault-server
+├── [Resource]  ServiceAccount example/my-vault-init
+├── [Resource]  ServiceAccount example/my-vault-server-cfssl
 ├── [Resource]  ServiceAccount example/my-vault-unseal
-└── [Resource]  ConfigMap example/my-vault'
+└── [Resource]  StatefulSet example/my-vault-server'
 
 TEST="$(config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]

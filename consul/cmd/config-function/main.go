@@ -22,7 +22,6 @@ func main() {
 			&consul.ConsulFilter{rw},
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
-			&filters.FileSetter{},
 		},
 		Outputs: []kio.Writer{rw},
 	}.Execute()

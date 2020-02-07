@@ -23,8 +23,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-prometheus_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-prometheus.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -50,12 +51,12 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-prometheus-server
+├── [Resource]  ConfigMap example/my-prometheus
 ├── [Resource]  Role example/my-prometheus-server
 ├── [Resource]  RoleBinding example/my-prometheus-server
 ├── [Resource]  Service example/my-prometheus-server
 ├── [Resource]  ServiceAccount example/my-prometheus-server
-├── [Resource]  StatefulSet example/my-prometheus-server
-└── [Resource]  ConfigMap example/my-prometheus'
+└── [Resource]  StatefulSet example/my-prometheus-server'
 
 TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
@@ -83,7 +84,7 @@ metadata:
       container:
         image: gcr.io/config-functions/prometheus:v0.0.1'
 
-TEST="$(cat $DEMO/my-prometheus_configmap.yaml)"
+TEST="$(cat $DEMO/functions/configmap_my-prometheus.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -95,7 +96,7 @@ with the annotation `config.bzub.dev/prometheus-scrape_configs`.
 
 <!-- @createScrapeConfigAnnotation @test -->
 ```sh
-cat <<EOF >$DEMO/my-service.yaml
+cat <<EOF >$DEMO/example/my-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -126,7 +127,7 @@ EOF
 Delete the old Prometheus server ConfigMap file and regenerate it.
 <!-- @regenerateServerCMWithScrapeConfig @test -->
 ```sh
-rm $DEMO/my-prometheus-server_configmap.yaml
+rm $DEMO/example/configmap_my-prometheus-server.yaml
 config run $DEMO
 
 EXPECTED='apiVersion: v1
@@ -143,6 +144,20 @@ data:
       scrape_interval:     15s
       evaluation_interval: 30s
     scrape_configs:
+      - job_name: my-service
+        kubernetes_sd_configs:
+          - role: endpoints
+            namespaces:
+              names:
+                - example
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_service_name]
+            action: keep
+            regex: my-service
+          - source_labels: [__meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: metrics
+
       - job_name: my-prometheus
         kubernetes_sd_configs:
           - role: endpoints
@@ -165,23 +180,9 @@ data:
             regex: __meta_kubernetes_pod_label_(.+)
           - source_labels: [__meta_kubernetes_pod_name]
             action: replace
-            target_label: kubernetes_pod_name
+            target_label: kubernetes_pod_name'
 
-      - job_name: my-service
-        kubernetes_sd_configs:
-          - role: endpoints
-            namespaces:
-              names:
-                - example
-        relabel_configs:
-          - source_labels: [__meta_kubernetes_service_name]
-            action: keep
-            regex: my-service
-          - source_labels: [__meta_kubernetes_endpoint_port_name]
-            action: keep
-            regex: metrics'
-
-TEST="$(cat $DEMO/my-prometheus-server_configmap.yaml)"
+TEST="$(cat $DEMO/example/configmap_my-prometheus-server.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

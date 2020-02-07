@@ -12,8 +12,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/function-config.yaml
+cat <<EOF >$DEMO/functions/configmap_my-consul.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -42,25 +43,25 @@ The function config generates the following resources.
 <!-- @verifyResourceList @test -->
 ```sh
 EXPECTED='.
-├── [Resource]  ConfigMap example/my-consul
-├── [Resource]  Job example/my-consul-acl-bootstrap
-├── [Resource]  Role example/my-consul-acl-bootstrap
-├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
-├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
 ├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
+├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  Job example/my-consul-acl-bootstrap
 ├── [Resource]  Job example/my-consul-gossip-encryption
+├── [Resource]  Job example/my-consul-tls
+├── [Resource]  Role example/my-consul-acl-bootstrap
 ├── [Resource]  Role example/my-consul-gossip-encryption
+├── [Resource]  Role example/my-consul-tls
+├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
 ├── [Resource]  RoleBinding example/my-consul-gossip-encryption
-├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
+├── [Resource]  RoleBinding example/my-consul-tls
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
-├── [Resource]  StatefulSet example/my-consul-server
-├── [Resource]  Job example/my-consul-tls
-├── [Resource]  Role example/my-consul-tls
-├── [Resource]  RoleBinding example/my-consul-tls
-└── [Resource]  ServiceAccount example/my-consul-tls'
+├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
+├── [Resource]  ServiceAccount example/my-consul-tls
+└── [Resource]  StatefulSet example/my-consul-server'
 
 TEST="$(config tree --graph-structure=owners $DEMO)"
 [ "$TEST" = "$EXPECTED" ]

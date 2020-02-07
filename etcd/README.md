@@ -23,8 +23,9 @@ Set up a workspace and define a function configuration.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/my-etcd_configmap.yaml
+cat <<EOF >$DEMO/functions/configmap_my-etcd.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -50,9 +51,9 @@ The function generates the following resources.
 ```sh
 EXPECTED='.
 ├── [Resource]  ConfigMap example/my-etcd-server
+├── [Resource]  ConfigMap example/my-etcd
 ├── [Resource]  Service example/my-etcd-server
-├── [Resource]  StatefulSet example/my-etcd-server
-└── [Resource]  ConfigMap example/my-etcd'
+└── [Resource]  StatefulSet example/my-etcd-server'
 
 TEST="$(config tree $DEMO --graph-structure=owners)"
 [ "$TEST" = "$EXPECTED" ]
@@ -85,7 +86,7 @@ data:
   tls_root_client_secret_name: "my-etcd-example-tls-client-root"
   tls_server_secret_name: "my-etcd-example-tls-server"'
 
-TEST="$(cat $DEMO/my-etcd_configmap.yaml)"
+TEST="$(cat $DEMO/functions/configmap_my-etcd.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
@@ -99,8 +100,8 @@ For illustration, let's set `spec.replicas` to `3` in the previously generated
 StatefulSet, and remove the old `ETCD_INITIAL_CLUSTER` setting.
 <!-- $patchSTSReplicas @test -->
 ```sh
-sed -i '/^spec:/a\  replicas: 3' $DEMO/my-etcd-server_statefulset.yaml
-sed -i '/^  ETCD_INITIAL_CLUSTER:/d' $DEMO/my-etcd-server_configmap.yaml
+sed -i '/^spec:/a\  replicas: 3' $DEMO/example/statefulset_my-etcd-server.yaml
+sed -i '/^  ETCD_INITIAL_CLUSTER:/d' $DEMO/example/configmap_my-etcd-server.yaml
 config run $DEMO
 ```
 
@@ -114,7 +115,7 @@ EXPECTED='.
 TEST="$(config tree \
   --field="data.ETCD_INITIAL_CLUSTER" \
   --graph-structure=owners \
-  $DEMO/my-etcd-server_configmap.yaml)"
+  $DEMO/example/configmap_my-etcd-server.yaml)"
 [ "$TEST" = "$EXPECTED" ]
 ```
 

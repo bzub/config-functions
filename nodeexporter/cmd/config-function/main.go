@@ -22,7 +22,6 @@ func main() {
 			&nodeexporter.NodeExporterFilter{rw},
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
-			&filters.FileSetter{},
 		},
 		Outputs: []kio.Writer{rw},
 	}.Execute()

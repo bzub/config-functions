@@ -31,8 +31,9 @@ used to create a CA and simple client/server TLS assets.
 <!-- @createFunctionConfig @test -->
 ```sh
 DEMO=$(mktemp -d)
+mkdir $DEMO/functions
 
-cat <<EOF >$DEMO/function-config.yaml
+cat <<EOF >$DEMO/functions/configmap_my-certs.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
