@@ -1,6 +1,6 @@
 package nodeexporter
 
-func (f *NodeExporterFilter) serverTemplates() map[string]string {
+func serverTemplates() map[string]string {
 	return map[string]string{
 		"server-ds":  serverDSTemplate,
 		"server-svc": serverSvcTemplate,

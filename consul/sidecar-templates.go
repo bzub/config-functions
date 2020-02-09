@@ -9,7 +9,7 @@ import (
 
 const casiAnnotation = "config.bzub.dev/consul-agent-sidecar-injector"
 
-func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, error) {
+func (f *ConfigFunction) sidecarPatches(in []*yaml.RNode) ([]*yaml.RNode, error) {
 	patches := []*yaml.RNode{}
 	for _, r := range in {
 		aValue, err := r.Pipe(yaml.GetAnnotation(casiAnnotation))
@@ -33,7 +33,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 			return nil, err
 		case cName == nil:
 			return nil, fmt.Errorf("metadata.name missing in config.")
-		case cName.Document().Value != fnCfg.Name:
+		case cName.Document().Value != f.Name:
 			continue
 		}
 
@@ -45,7 +45,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 			return nil, err
 		case cNS == nil:
 			return nil, fmt.Errorf("metadata.namespace missing in config.")
-		case cNS.Document().Value != fnCfg.Namespace:
+		case cNS.Document().Value != f.Namespace:
 			continue
 		}
 
@@ -56,7 +56,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 		}
 		patchCfg := &casiConfig{
 			PatchTarget:    rMeta,
-			FunctionConfig: fnCfg,
+			ConfigFunction: f,
 		}
 
 		// Create a sidecar patch for this Resource.
@@ -68,7 +68,7 @@ func sidecarPatches(in []*yaml.RNode, fnCfg *FunctionConfig) ([]*yaml.RNode, err
 		}
 		patches = append(patches, scPatch)
 
-		if fnCfg.Data.TLSGeneratorJobEnabled {
+		if f.Data.TLSGeneratorJobEnabled {
 			// Create a ConfigMap to configure Consul agent TLS.
 			sidecarTLSCM, err := cfunc.ParseTemplate(
 				"sidecar-tls-cm", sidecarTLSCMTemplate, patchCfg,

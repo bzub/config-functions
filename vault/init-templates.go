@@ -1,6 +1,6 @@
 package vault
 
-func (f *VaultFilter) initJobTemplates() map[string]string {
+func initJobTemplates() map[string]string {
 	return map[string]string{
 		"init-job":         initJobTemplate,
 		"init-sa":          initSATemplate,

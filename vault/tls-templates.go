@@ -48,7 +48,7 @@ data:
         }
       ]
     }
-{{ range $i, $hostname := .Data.Hostnames }}
+{{ range $i, $hostname := .Hostnames }}
   {{ $i }}_server_csr.json: |-
     {
       "CN": "vault-server",

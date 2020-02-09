@@ -1,6 +1,6 @@
 package consul
 
-func (f *ConsulFilter) gossipTemplates() map[string]string {
+func gossipTemplates() map[string]string {
 	return map[string]string{
 		"gossip-job":         gossipJobTemplate,
 		"gossip-sa":          gossipSATemplate,

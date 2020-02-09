@@ -1,6 +1,6 @@
 [vault]: https://www.vaultproject.io/
-[FunctionConfig]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#FunctionConfig
-[FunctionData]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#FunctionData
+[ConfigFunction]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#ConfigFunction
+[Options]: https://pkg.go.dev/github.com/bzub/config-functions/vault?tab=doc#Options
 
 # Vault Configuration Function
 
@@ -8,9 +8,8 @@ Creates Resource configs to deploy [Vault][vault] on Kubernetes.
 
 ## Function Features
 
-The function metadata is documented in the [FunctionConfig][FunctionConfig] Go
-type. The options available to configure the function are documented in the
-[FunctionData][FunctionData] type.
+Function settings are documented in the [Options][Options] Go type. Metadata
+and other data is documented in the [ConfigFunction][ConfigFunction] type.
 
 ## Getting Started
 

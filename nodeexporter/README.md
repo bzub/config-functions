@@ -1,5 +1,5 @@
 [nodeexporter]: https://github.com/prometheus/node_exporter
-[FunctionConfig]: https://pkg.go.dev/github.com/bzub/config-functions/nodeexporter?tab=doc#FunctionConfig
+[ConfigFunction]: https://pkg.go.dev/github.com/bzub/config-functions/nodeexporter?tab=doc#ConfigFunction
 
 # Node Exporter Configuration Function
 
@@ -7,7 +7,7 @@ Creates Resource configs to deploy [Node Exporter][nodeexporter] on Kubernetes.
 
 ## Function Features
 
-The function metadata is documented in the [FunctionConfig][FunctionConfig] Go
+Function metadata is documented in the [ConfigFunction][ConfigFunction] Go
 type.
 
 ## Getting Started
@@ -70,7 +70,7 @@ metadata:
   namespace: "example"
   labels:
     app.kubernetes.io/instance: my-nodeexporter
-    app.kubernetes.io/name: nodeexporter-server
+    app.kubernetes.io/name: nodeexporter
   annotations:
     config.kubernetes.io/function: |
       container:

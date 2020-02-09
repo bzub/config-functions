@@ -1,6 +1,6 @@
 package etcd
 
-func (f *EtcdFilter) serverTemplates() map[string]string {
+func serverTemplates() map[string]string {
 	return map[string]string{
 		"server-cm":  serverCmTemplate,
 		"server-sts": serverStsTemplate,
@@ -21,7 +21,7 @@ data:
   ETCD_LOGGER: zap
   ETCD_INITIAL_CLUSTER_STATE: new
   ETCD_INITIAL_CLUSTER_TOKEN: default
-  ETCD_INITIAL_CLUSTER: {{ .Data.InitialCluster }}
+  ETCD_INITIAL_CLUSTER: {{ .InitialCluster }}
   ETCD_LISTEN_CLIENT_URLS: https://0.0.0.0:2379
   ETCD_LISTEN_METRICS_URLS: http://0.0.0.0:8080
   ETCD_LISTEN_PEER_URLS: https://0.0.0.0:2380

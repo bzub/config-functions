@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	etcdFilter := &etcd.ConfigFunction{}
+	etcdFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&etcd.EtcdFilter{rw},
+			etcdFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},

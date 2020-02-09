@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	nodeExporterFilter := &nodeexporter.ConfigFunction{}
+	nodeExporterFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&nodeexporter.NodeExporterFilter{rw},
+			nodeExporterFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},

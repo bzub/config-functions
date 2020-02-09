@@ -16,10 +16,13 @@ func main() {
 		KeepReaderAnnotations: true,
 	}
 
+	cfsslFilter := &cfssl.ConfigFunction{}
+	cfsslFilter.RW = rw
+
 	err := kio.Pipeline{
 		Inputs: []kio.Reader{rw},
 		Filters: []kio.Filter{
-			&cfssl.CfsslFilter{rw},
+			cfsslFilter,
 			&filters.MergeFilter{},
 			&filters.FormatFilter{},
 		},
