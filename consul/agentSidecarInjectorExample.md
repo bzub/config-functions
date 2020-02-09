@@ -19,7 +19,7 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.3
+        image: gcr.io/config-functions/consul:v0.0.1
 data:
   agent_tls_enabled: "true"
   gossip_enabled: "true"

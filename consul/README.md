@@ -33,7 +33,7 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.3
+        image: gcr.io/config-functions/consul:v0.0.1
 EOF
 ```
 
@@ -81,7 +81,7 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.3
+        image: gcr.io/config-functions/consul:v0.0.1
 data:
   acl_bootstrap_job_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"

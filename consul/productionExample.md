@@ -23,7 +23,7 @@ metadata:
   annotations:
     config.kubernetes.io/function: |
       container:
-        image: gcr.io/config-functions/consul:v0.0.3
+        image: gcr.io/config-functions/consul:v0.0.1
 data:
   acl_bootstrap_job_enabled: "true"
   tls_generator_job_enabled: "true"
