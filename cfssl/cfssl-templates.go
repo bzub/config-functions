@@ -57,7 +57,7 @@ spec:
               name: cfssl-certs
       containers:
         - name: create-secret
-          image: k8s.gcr.io/hyperkube:v1.17.2
+          image: k8s.gcr.io/hyperkube:v1.17.4
           command:
             - /bin/sh
             - -ec
