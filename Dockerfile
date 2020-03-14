@@ -1,4 +1,4 @@
-FROM golang:1.13-stretch
+FROM golang:1.14-stretch
 ARG config_function
 ENV CGO_ENABLED=0
 WORKDIR /go/src/config-functions
