@@ -18,6 +18,9 @@ metadata:
 data:
   acl_bootstrap_job_enabled: "{{ .Data.ACLBootstrapJobEnabled }}"
   agent_sidecar_injector_enabled: "{{ .Data.AgentSidecarInjectorEnabled }}"
+  backup_cron_job_enabled: "{{ .Data.BackupCronJobEnabled }}"
+  backup_secret_name: "{{ .Data.BackupSecretName }}"
+  restore_secret_name: "{{ .Data.RestoreSecretName }}"
   tls_generator_job_enabled: "{{ .Data.TLSGeneratorJobEnabled }}"
   gossip_key_generator_job_enabled: "{{ .Data.GossipKeyGeneratorJobEnabled }}"
   acl_bootstrap_secret_name: "{{ .Data.ACLBootstrapSecretName }}"
@@ -54,6 +57,12 @@ type Options struct {
 	// https://www.consul.io/docs/agent/basics.html
 	AgentSidecarInjectorEnabled bool `yaml:"agent_sidecar_injector_enabled"`
 
+	// BackupCronJobEnabled adds a CronJob that runs `consul snapshot save`
+	// on the cluster periodically.
+	//
+	// https://www.consul.io/docs/commands/snapshot/save.html
+	BackupCronJobEnabled bool `json:"backup_cron_job_enabled"`
+
 	// TLSGeneratorJobEnabled creates a Job which generates TLS assets for
 	// Consul communication, and stores them in Secrets.
 	//
@@ -69,6 +78,14 @@ type Options struct {
 	// ACLBootstrapSecretName is the name of the Secret used to hold Consul
 	// cluster ACL bootstrap information.
 	ACLBootstrapSecretName string `yaml:"acl_bootstrap_secret_name"`
+
+	// BackupSecretName is the name of the Secret used to hold a backup of
+	// the Consul k8s secrets and database.
+	BackupSecretName string `json:"backup_secret_name"`
+
+	// RestoreSecretName is the name of the Secret that restore Jobs will
+	// look for to restore from backups.
+	RestoreSecretName string `json:"restore_secret_name"`
 
 	// TLSServerSecretName is the name of the Secret used to hold Consul
 	// server TLS assets.
@@ -168,6 +185,15 @@ func (f *ConfigFunction) Filter(in []*yaml.RNode) ([]*yaml.RNode, error) {
 		generatedRs = append(generatedRs, sidecarRs...)
 	}
 
+	if f.Data.BackupCronJobEnabled {
+		// Generate backup CronJob Resources from templates.
+		backupRs, err := cfunc.ParseTemplates(backupCronJobTemplates(), f)
+		if err != nil {
+			return nil, err
+		}
+		generatedRs = append(generatedRs, backupRs...)
+	}
+
 	// Return the generated resources + patches + input.
 	return append(generatedRs, in...), nil
 }
@@ -191,6 +217,8 @@ func (f *ConfigFunction) syncData(in []*yaml.RNode) error {
 		TLSCLISecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-tls-cli",
 		TLSClientSecretName:    fnMeta.Name + "-" + fnMeta.Namespace + "-tls-client",
 		GossipSecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-gossip",
+		BackupSecretName:       fnMeta.Name + "-" + fnMeta.Namespace + "-backup",
+		RestoreSecretName:      fnMeta.Name + "-" + fnMeta.Namespace + "-restore",
 	}
 
 	// Populate function data from config.
@@ -218,12 +246,18 @@ func (d *Options) UnmarshalYAML(node *yaml.Node) error {
 			d.ACLBootstrapJobEnabled = true
 		case key == "agent_sidecar_injector_enabled" && value == "true":
 			d.AgentSidecarInjectorEnabled = true
+		case key == "backup_cron_job_enabled" && value == "true":
+			d.BackupCronJobEnabled = true
 		case key == "tls_generator_job_enabled" && value == "true":
 			d.TLSGeneratorJobEnabled = true
 		case key == "gossip_key_generator_job_enabled" && value == "true":
 			d.GossipKeyGeneratorJobEnabled = true
 		case key == "acl_bootstrap_secret_name":
 			d.ACLBootstrapSecretName = value
+		case key == "backup_secret_name":
+			d.BackupSecretName = value
+		case key == "restore_secret_name":
+			d.RestoreSecretName = value
 		case key == "tls_server_secret_name":
 			d.TLSServerSecretName = value
 		case key == "tls_ca_secret_name":

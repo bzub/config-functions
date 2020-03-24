@@ -11,6 +11,9 @@ Creates Resource configs to deploy [Consul][consul] on Kubernetes.
 Function settings are documented in the [Options][Options] Go type. Metadata
 and other data is documented in the [ConfigFunction][ConfigFunction] type.
 
+More details on backup/restore features can be found in
+[backup-restore.md](./backup-restore.md).
+
 ## Getting Started
 
 In the following example we create Resource configs for a Consul server. These
@@ -86,8 +89,11 @@ data:
   acl_bootstrap_job_enabled: "false"
   acl_bootstrap_secret_name: "my-consul-example-acl"
   agent_sidecar_injector_enabled: "false"
+  backup_cron_job_enabled: "false"
+  backup_secret_name: "my-consul-example-backup"
   gossip_key_generator_job_enabled: "false"
   gossip_secret_name: "my-consul-example-gossip"
+  restore_secret_name: "my-consul-example-restore"
   tls_ca_secret_name: "my-consul-example-tls-ca"
   tls_cli_secret_name: "my-consul-example-tls-cli"
   tls_client_secret_name: "my-consul-example-tls-client"
