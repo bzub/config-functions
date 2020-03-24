@@ -28,6 +28,7 @@ data:
   acl_bootstrap_job_enabled: "true"
   tls_generator_job_enabled: "true"
   gossip_key_generator_job_enabled: "true"
+  backup_cron_job_enabled: "true"
 EOF
 ```
 
@@ -46,20 +47,29 @@ EXPECTED='.
 ├── [Resource]  ConfigMap example/my-consul-example-agent
 ├── [Resource]  ConfigMap example/my-consul-example-server
 ├── [Resource]  ConfigMap example/my-consul
+├── [Resource]  CronJob example/my-consul-backup
+├── [Resource]  CronJob example/my-consul-restore-secrets
+├── [Resource]  CronJob example/my-consul-restore-snapshot
 ├── [Resource]  Job example/my-consul-acl-bootstrap
 ├── [Resource]  Job example/my-consul-gossip-encryption
 ├── [Resource]  Job example/my-consul-tls
 ├── [Resource]  Role example/my-consul-acl-bootstrap
+├── [Resource]  Role example/my-consul-backup
 ├── [Resource]  Role example/my-consul-gossip-encryption
+├── [Resource]  Role example/my-consul-restore-secrets
 ├── [Resource]  Role example/my-consul-tls
 ├── [Resource]  RoleBinding example/my-consul-acl-bootstrap
+├── [Resource]  RoleBinding example/my-consul-backup
 ├── [Resource]  RoleBinding example/my-consul-gossip-encryption
+├── [Resource]  RoleBinding example/my-consul-restore-secrets
 ├── [Resource]  RoleBinding example/my-consul-tls
 ├── [Resource]  Service example/my-consul-server-dns
 ├── [Resource]  Service example/my-consul-server-ui
 ├── [Resource]  Service example/my-consul-server
 ├── [Resource]  ServiceAccount example/my-consul-acl-bootstrap
+├── [Resource]  ServiceAccount example/my-consul-backup
 ├── [Resource]  ServiceAccount example/my-consul-gossip-encryption
+├── [Resource]  ServiceAccount example/my-consul-restore-secrets
 ├── [Resource]  ServiceAccount example/my-consul-tls
 └── [Resource]  StatefulSet example/my-consul-server'
 
