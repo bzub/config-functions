@@ -113,7 +113,7 @@ Some parts of the configuration can be modified via `config set`.
 EXPECTED=\
 "my-consul-replicas"
 
-TEST="$(config set $DEMO|tail -n +2|awk '{print $1}')"
+TEST="$(config list-setters $DEMO|tail -n +2|awk '{print $1}')"
 [ "$TEST" = "$EXPECTED" ]
 ```
 
