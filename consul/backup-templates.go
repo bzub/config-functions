@@ -48,25 +48,32 @@ spec:
                 - save
                 - /consulbackup/backup.snap
               env:
-                - name: CONSUL_HTTP_ADDR
-                  value: https://{{ .Name }}-server.{{ .Namespace }}.svc:8500
                 - name: CONSUL_HTTP_TOKEN
                   valueFrom:
                     secretKeyRef:
                       name: {{ .Data.ACLBootstrapSecretName }}
                       key: secret_id.txt
                       optional: true
+{{- if .Data.TLSGeneratorJobEnabled }}
+                - name: CONSUL_HTTP_ADDR
+                  value: https://{{ .Name }}-server.{{ .Namespace }}.svc:8500
                 - name: CONSUL_CACERT
                   value: /consul/tls/consul-agent-ca.pem
                 - name: CONSUL_CLIENT_CERT
                   value: /consul/tls/dc1-cli-consul-0.pem
                 - name: CONSUL_CLIENT_KEY
                   value: /consul/tls/dc1-cli-consul-0-key.pem
+{{- else }}
+                - name: CONSUL_HTTP_ADDR
+                  value: http://{{ .Name }}-server.{{ .Namespace }}.svc:8500
+{{- end }}
               volumeMounts:
                 - name: consul-backup
                   mountPath: /consulbackup
+{{- if .Data.TLSGeneratorJobEnabled }}
                 - name: consul-tls-secret
                   mountPath: /consul/tls
+{{- end }}
           containers:
             - name: consul-backup-ship
               image: k8s.gcr.io/hyperkube:v1.17.4
@@ -106,6 +113,7 @@ spec:
                   mountPath: /consulbackup
           volumes:
             - name: consul-backup
+{{- if .Data.TLSGeneratorJobEnabled }}
             - name: consul-tls-secret
               projected:
                 sources:
@@ -115,6 +123,7 @@ spec:
                       name: {{ .Data.TLSCLISecretName }}
                   - secret:
                       name: {{ .Data.TLSClientSecretName }}
+{{- end }}
 `
 
 var backupSATemplate = `apiVersion: v1
@@ -312,6 +321,7 @@ spec:
                   echo "${output}"|grep SecretID|awk '{print $2}'|tr -d '\n' \
                     > "${secret_dir}/secret_id.txt"
               env:
+{{- if .Data.TLSGeneratorJobEnabled }}
                 - name: CONSUL_HTTP_ADDR
                   value: https://{{ .Name }}-server.{{ .Namespace }}.svc:8500
                 - name: CONSUL_CACERT
@@ -320,11 +330,17 @@ spec:
                   value: /consul/tls/dc1-cli-consul-0.pem
                 - name: CONSUL_CLIENT_KEY
                   value: /consul/tls/dc1-cli-consul-0-key.pem
+{{- else }}
+                - name: CONSUL_HTTP_ADDR
+                  value: http://{{ .Name }}-server.{{ .Namespace }}.svc:8500
+{{- end }}
               volumeMounts:
                 - name: consul-acl-token
                   mountPath: /consul/acl
+{{- if .Data.TLSGeneratorJobEnabled }}
                 - name: consul-tls-secret
                   mountPath: /consul/tls
+{{- end }}
           containers:
             - name: consul-restore-snapshot
               image: docker.io/library/consul:1.7.2
@@ -335,6 +351,7 @@ spec:
                 - -token-file=/consul/acl/secret_id.txt
                 - /consul/restore/backup.snap
               env:
+{{- if .Data.TLSGeneratorJobEnabled }}
                 - name: CONSUL_HTTP_ADDR
                   value: https://{{ .Name }}-server.{{ .Namespace }}.svc:8500
                 - name: CONSUL_CACERT
@@ -343,11 +360,17 @@ spec:
                   value: /consul/tls/dc1-cli-consul-0.pem
                 - name: CONSUL_CLIENT_KEY
                   value: /consul/tls/dc1-cli-consul-0-key.pem
+{{- else }}
+                - name: CONSUL_HTTP_ADDR
+                  value: http://{{ .Name }}-server.{{ .Namespace }}.svc:8500
+{{- end }}
               volumeMounts:
                 - name: consul-acl-token
                   mountPath: /consul/acl
+{{- if .Data.TLSGeneratorJobEnabled }}
                 - name: consul-tls-secret
                   mountPath: /consul/tls
+{{- end }}
                 - name: restore-secret
                   mountPath: /consul/restore
           volumes:
@@ -357,6 +380,7 @@ spec:
                 sources:
                   - secret:
                       name: {{ .Data.RestoreSecretName }}
+{{- if .Data.TLSGeneratorJobEnabled }}
             - name: consul-tls-secret
               projected:
                 sources:
@@ -366,4 +390,5 @@ spec:
                       name: {{ .Data.TLSCLISecretName }}
                   - secret:
                       name: {{ .Data.TLSClientSecretName }}
+{{- end }}
 `
